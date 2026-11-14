@@ -102,6 +102,23 @@
   pre.out{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;z-index:80;pointer-events:none;max-width:90vw}
   .toast.show{opacity:1;transform:translateX(-50%)}
+  .row.editable{position:relative;cursor:pointer;border-radius:8px;margin:0 -10px;padding-left:10px;padding-right:34px}
+  .row.editable:hover{background:var(--bg)}
+  .pen{opacity:0;color:var(--muted);font-size:13px;transition:opacity .15s}
+  .row.editable .pen{position:absolute;right:10px;top:12px}
+  .row.editable:hover .pen,.editable-name:hover .pen{opacity:1}
+  .editable-name{cursor:pointer}
+  .addchips{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 16px}
+  .card.editing{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .card.editing .row{align-items:center}
+  .card.editing input,.card.editing textarea,.namegrid input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+  .card.editing input:focus,.card.editing textarea:focus,.namegrid input:focus{outline:2px solid var(--accent);outline-offset:-1px;background:var(--panel)}
+  .namegrid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .namegrid .field{margin:0}
+  .editbar{align-items:center;margin-bottom:6px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2}
+  .hint{font-size:12px;color:var(--muted);margin-left:auto}
+  @media (max-width:560px){ .namegrid{grid-template-columns:1fr} .hint{display:none} .dhead{align-items:flex-start} }
+  @media (hover:none){ .pen{opacity:.6} }
   .back{display:none}
   /* bottom navigation */
   :root{--nav-h:64px}
@@ -423,7 +440,7 @@
     $("#count").textContent = items.length === contacts.length ? `${contacts.length} contact${contacts.length===1?"":"s"}` : `${items.length} of ${contacts.length} shown`;
   }
 
-  function row(k, v){ return v ? `<div class="row"><div class="k">${k}</div><div class="v">${v}</div></div>` : ""; }
+  function row(k, v, field){ return v ? `<div class="row editable" data-edit="${field}" title="Click to edit"><div class="k">${k}</div><div class="v">${v}</div><span class="pen" aria-hidden="true">✎</span></div>` : ""; }
   function fmtDate(d){ if(!d) return ""; const t = new Date(d + (d.length===10?"T00:00:00":"")); return isNaN(t) ? esc(d) : t.toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}); }
   function safeUrl(u){ if(!u) return ""; const s = /^https?:\/\//i.test(u) ? u : "https://"+u; try { const x=new URL(s); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch(e){ return ""; } }
 
@@ -431,6 +448,7 @@
     const c = contacts.find(x => x.id === selectedId);
     $("#app").classList.toggle("viewing", !!c);
     if (!c){
+      inlineEdit = false;
       $("#main").innerHTML = `<div class="empty"><div><div style="font-size:40px">👥</div>
         <h2>${contacts.length ? "Select a contact" : "Your contact list is empty"}</h2>
         <p>${contacts.length ? "Pick someone from the list to see their details." : "Add your first contact, or import a vCard, CSV or JSON file."}</p>
@@ -438,13 +456,15 @@
           <button class="btn primary" data-act="add">＋ New contact</button><button class="btn" data-act="import">⤓ Import</button></div></div></div>`;
       return;
     }
+    if (inlineEdit){ renderInlineEditor(c); return; }
     const url = safeUrl(c.website);
     const role = [c.jobTitle, c.company].filter(Boolean).join(" · ");
+    const missing = EDIT_ROWS.filter(([k]) => k === "tags" ? !tagList(c).length : !c[k]);
     $("#main").innerHTML = `<div class="detail">
       <button class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
       <div class="dhead">
         <div class="avatar lg" style="background:${colorFor(c)}">${esc(initials(c))}</div>
-        <div><h2>${esc(fullName(c))}</h2>${role?`<div class="role">${esc(role)}</div>`:""}</div>
+        <div class="editable-name" data-edit="firstName" title="Click to edit"><h2>${esc(fullName(c))} <span class="pen" aria-hidden="true">✎</span></h2>${role?`<div class="role">${esc(role)}</div>`:""}</div>
       </div>
       <div class="actions">
         <button class="btn primary" data-act="edit">✎ Edit</button>
@@ -454,17 +474,18 @@
         <button class="btn danger" data-act="delete">🗑 Delete</button>
       </div>
       <div class="card">
-        ${row("Phone", c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>` : "")}
-        ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "")}
-        ${row("Company", esc(c.company))}
-        ${row("Job title", esc(c.jobTitle))}
-        ${row("Address", esc(c.address))}
-        ${row("Birthday", fmtDate(c.birthday))}
-        ${row("Website", url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(c.website)}</a>` : "")}
-        ${row("Tags", tagList(c).map(t=>`<span class="tag">${esc(t)}</span>`).join(""))}
-        ${row("Notes", esc(c.notes))}
-        ${!(c.phone||c.email||c.company||c.jobTitle||c.address||c.birthday||c.website||tagList(c).length||c.notes) ? '<div class="row"><div class="k">Details</div><div class="v" style="color:var(--muted)">No details yet — click Edit to add some.</div></div>' : ""}
+        ${row("Phone", c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>` : "", "phone")}
+        ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "", "email")}
+        ${row("Company", esc(c.company), "company")}
+        ${row("Job title", esc(c.jobTitle), "jobTitle")}
+        ${row("Address", esc(c.address), "address")}
+        ${row("Birthday", fmtDate(c.birthday), "birthday")}
+        ${row("Website", url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(c.website)}</a>` : esc(c.website), "website")}
+        ${row("Tags", tagList(c).map(t=>`<span class="tag">${esc(t)}</span>`).join(""), "tags")}
+        ${row("Notes", esc(c.notes), "notes")}
+        ${missing.length === EDIT_ROWS.length ? '<div class="row"><div class="k">Details</div><div class="v" style="color:var(--muted)">No details yet — add some below.</div></div>' : ""}
       </div>
+      ${missing.length ? `<div class="addchips">${missing.map(([k,label]) => `<button class="chip" data-edit="${k}">＋ ${label}</button>`).join("")}</div>` : ""}
       <div class="stamp">Added ${new Date(c.createdAt).toLocaleString()}${c.updatedAt && c.updatedAt!==c.createdAt ? ` · Updated ${new Date(c.updatedAt).toLocaleString()}` : ""}</div>
     </div>`;
   }
@@ -624,7 +645,7 @@
     const b = e.target.closest("[data-view]"); if (!b) return;
     const v = b.dataset.view;
     if (v === "contacts" && view === "contacts" && selectedId && matchMedia("(max-width:760px)").matches) selectedId = null;
-    setView(v); dupQuery = ""; render(); $("#main").scrollTop = 0;
+    leaveInline(() => { setView(v); dupQuery = ""; render(); $("#main").scrollTop = 0; });
   });
 
   function render(){
@@ -640,7 +661,12 @@
   document.querySelectorAll(".scrim").forEach(s => {
     s.addEventListener("click", e => { if (e.target === s || e.target.closest("[data-close]")) closeModal(s); });
   });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".scrim.open").forEach(closeModal); });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelectorAll(".scrim.open");
+    if (open.length) open.forEach(closeModal);
+    else if (inlineEdit){ e.preventDefault(); leaveInline(renderMain); }
+  });
 
   // ----- edit -----
   function openEdit(c){
@@ -656,31 +682,116 @@
     openModal("#editScrim");
     setTimeout(()=>$("#f_firstName").focus(), 30);
   }
-  $("#editForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const raw = {};
-    for (const f of FIELDS){ const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
-    if (![raw.firstName, raw.lastName, raw.company, raw.phone, raw.email].some(v=>String(v).trim())){
-      $("#editErr").textContent = "Add at least a name, company, phone or email."; return;
-    }
-    if (raw.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.email.trim())){ $("#editErr").textContent = "That email address doesn't look right."; return; }
+  function validateRaw(raw){
+    if (![raw.firstName, raw.lastName, raw.company, raw.phone, raw.email].some(v=>String(v||"").trim()))
+      return "Add at least a name, company, phone or email.";
+    if (raw.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.email.trim())) return "That email address doesn't look right.";
+    if (raw.website && !safeUrl(raw.website.trim())) return "That website address doesn't look right.";
+    return "";
+  }
+  async function saveContact(raw, id){
     const now = new Date().toISOString();
     let c;
-    if (editingId){
-      const old = contacts.find(x=>x.id===editingId);
-      c = normalize({ ...old, ...raw, id: editingId, createdAt: old?.createdAt, updatedAt: now });
-      contacts = contacts.map(x => x.id===editingId ? c : x);
+    if (id){
+      const old = contacts.find(x=>x.id===id);
+      c = normalize({ ...old, ...raw, id, createdAt: old?.createdAt, updatedAt: now });
+      contacts = contacts.map(x => x.id===id ? c : x);
     } else {
       c = normalize({ ...raw, createdAt: now, updatedAt: now });
       contacts.push(c);
     }
     selectedId = c.id;
     setView("contacts");
-    closeModal($("#editScrim"));
     render();
     await persist(c);
-    toast(editingId ? "Contact updated" : "Contact added");
+    toast(id ? "Changes saved" : "Contact added");
+    return c;
+  }
+  $("#editForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const raw = {};
+    for (const f of FIELDS){ const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    const err = validateRaw(raw);
+    if (err){ $("#editErr").textContent = err; return; }
+    closeModal($("#editScrim"));
+    await saveContact(raw, editingId);
   });
+
+  // ---------- inline editing of the selected contact ----------
+  let inlineEdit = false;      // detail panel is in edit mode
+  let inlineFocus = null;      // field to focus when entering edit mode
+  const EDIT_ROWS = [
+    ["phone","Phone","tel"],["email","Email","email"],["company","Company","text"],["jobTitle","Job title","text"],
+    ["address","Address","text"],["birthday","Birthday","date"],["website","Website","url"],["tags","Tags","text"],["notes","Notes","textarea"]
+  ];
+  function startInlineEdit(field){
+    inlineEdit = true; inlineFocus = field || "firstName"; renderMain();
+  }
+  function collectInline(){
+    const f = $("#inlineForm"); if (!f) return null;
+    const raw = {};
+    for (const k of FIELDS){
+      const el = f.elements[k]; if (!el) continue;
+      raw[k] = k === "favorite" ? el.checked : el.value;
+    }
+    return raw;
+  }
+  function inlineDirty(){
+    if (!inlineEdit) return false;
+    const c = contacts.find(x => x.id === selectedId), raw = collectInline();
+    if (!c || !raw) return false;
+    return FIELDS.some(k => k === "favorite" ? !!raw[k] !== !!c[k]
+      : k === "tags" ? tagList(raw).join(",") !== tagList(c).join(",")
+      : String(raw[k] ?? "").trim() !== String(c[k] ?? ""));
+  }
+  // run `next` only after the user decides what to do with unsaved edits
+  function leaveInline(next){
+    if (!inlineDirty()){ inlineEdit = false; next(); return; }
+    askConfirm("Discard unsaved changes?", "You've changed this contact but haven't saved it.", "Discard", () => { inlineEdit = false; next(); });
+  }
+  async function submitInline(){
+    const raw = collectInline(); if (!raw) return;
+    const err = validateRaw(raw);
+    if (err){ $("#inlineErr").textContent = err; return; }
+    inlineEdit = false;
+    await saveContact(raw, selectedId);
+  }
+  function renderInlineEditor(c){
+    const inp = (name, label, type, val) => type === "textarea"
+      ? `<textarea name="${name}" id="i_${name}" rows="3" aria-label="${label}">${esc(val)}</textarea>`
+      : `<input name="${name}" id="i_${name}" type="${type}" value="${esc(val)}" aria-label="${label}"${name==="tags"?' placeholder="family, work"':""}${name==="website"?' placeholder="https://"':""}>`;
+    const open = $("#inlineForm");
+    if (open && open.dataset.id === c.id) return;   // keep what the user is typing when data refreshes
+    $("#main").innerHTML = `<form class="detail" id="inlineForm" data-id="${esc(c.id)}" novalidate>
+      <button type="button" class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
+      <div class="dhead">
+        <div class="avatar lg" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        <div class="namegrid">
+          <div class="field"><label for="i_firstName">First name</label>${inp("firstName","First name","text",c.firstName)}</div>
+          <div class="field"><label for="i_lastName">Last name</label>${inp("lastName","Last name","text",c.lastName)}</div>
+        </div>
+      </div>
+      <div class="actions editbar">
+        <button type="submit" class="btn primary">✓ Save changes</button>
+        <button type="button" class="btn" data-act="cancelEdit">Cancel</button>
+        <label class="keep" style="margin-left:4px"><input type="checkbox" name="favorite" ${c.favorite?"checked":""}> ★ Favorite</label>
+        <span class="hint">Enter to save · Esc to cancel</span>
+      </div>
+      <div class="err" id="inlineErr" role="alert"></div>
+      <div class="card editing">
+        ${EDIT_ROWS.map(([k,label,type]) => `<div class="row"><label class="k" for="i_${k}">${label}</label><div class="v">${inp(k,label,type, k==="tags" ? tagList(c).join(", ") : c[k])}</div></div>`).join("")}
+      </div>
+    </form>`;
+    const el = $("#i_" + (inlineFocus || "firstName")) || $("#i_firstName");
+    inlineFocus = null;
+    if (el){ el.focus(); if (el.setSelectionRange && el.type !== "date" && el.type !== "email" && el.type !== "url") { try { el.setSelectionRange(el.value.length, el.value.length); } catch(e){} } }
+  }
+  $("#main").addEventListener("submit", e => { if (e.target.id === "inlineForm"){ e.preventDefault(); submitInline(); } });
+  $("#main").addEventListener("keydown", e => {
+    if (!inlineEdit) return;
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)){ e.preventDefault(); submitInline(); }
+  });
+  $("#main").addEventListener("input", e => { if (inlineEdit && $("#inlineErr")) $("#inlineErr").textContent = ""; });
 
   // ----- delete -----
   function askConfirm(title, html, okLabel, onOk){
@@ -947,7 +1058,7 @@
   });
 
   // ---------- events ----------
-  $("#addBtn").addEventListener("click", () => openEdit(null));
+  $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
   $("#importBtn").addEventListener("click", openImport);
   $("#exportAllBtn").addEventListener("click", () => {
     const vis = visible();
@@ -956,7 +1067,10 @@
   });
   $("#search").addEventListener("input", e => { query = e.target.value; renderList(); });
   $("#filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b){ filter = b.dataset.f; renderFilters(); renderList(); } });
-  $("#list").addEventListener("click", e => { const it = e.target.closest(".item"); if (it){ selectedId = it.dataset.id; renderList(); renderMain(); $("#main").scrollTop = 0; } });
+  $("#list").addEventListener("click", e => {
+    const it = e.target.closest(".item"); if (!it || it.dataset.id === selectedId) return;
+    leaveInline(() => { selectedId = it.dataset.id; renderList(); renderMain(); $("#main").scrollTop = 0; });
+  });
   $("#main").addEventListener("change", e => {
     const r = e.target.closest('input[type="radio"][data-g]');
     if (r){ keepChoice.set(r.dataset.g, r.value); renderDups(); }
@@ -966,13 +1080,16 @@
   });
   $("#main").addEventListener("click", async e => {
     const d = e.target.closest("[data-dact]"); if (d){ handleDup(d); return; }
+    const ed = e.target.closest("[data-edit]");
+    if (ed && !inlineEdit && !e.target.closest("a")){ startInlineEdit(ed.dataset.edit); return; }
     const b = e.target.closest("[data-act]"); if (!b) return;
     const c = contacts.find(x => x.id === selectedId);
     switch (b.dataset.act){
       case "add": openEdit(null); break;
       case "import": openImport(); break;
-      case "back": selectedId = null; render(); break;
-      case "edit": if (c) openEdit(c); break;
+      case "back": leaveInline(() => { selectedId = null; render(); }); break;
+      case "edit": if (c) startInlineEdit("firstName"); break;
+      case "cancelEdit": leaveInline(renderMain); break;
       case "delete": if (c) confirmDelete(c); break;
       case "export1": if (c) openExport([c], fullName(c), true); break;
       case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); render(); await persist(c); } break;
@@ -982,7 +1099,8 @@
   document.addEventListener("keydown", e => {
     if (document.querySelector(".scrim.open") || /INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
     if (e.key === "/"){ e.preventDefault(); $("#search").focus(); }
-    if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey){ e.preventDefault(); openEdit(null); }
+    if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !inlineEdit){ e.preventDefault(); openEdit(null); }
+    if (e.key.toLowerCase() === "e" && !e.metaKey && !e.ctrlKey && !inlineEdit && view === "contacts" && selectedId){ e.preventDefault(); startInlineEdit("firstName"); }
   });
 
   initStorage();
