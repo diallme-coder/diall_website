@@ -528,6 +528,65 @@
   .defcc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 8px 2px;font-size:13px;color:var(--muted)}
   .defcc select{max-width:260px}
   @media (max-width:560px){ .ccbar{grid-template-columns:1fr 54px} .ccbar .track{grid-column:1/-1;grid-row:2} }
+
+  /* categories, priority, follow-ups, review */
+  .catdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);flex:none;margin-left:6px;vertical-align:1px}
+  .pill .catdot{margin:0 2px 0 0}
+  .catpill{background:color-mix(in srgb,var(--c) 12%,var(--panel));border-color:color-mix(in srgb,var(--c) 35%,transparent);color:color-mix(in srgb,var(--c) 80%,var(--ink))}
+  .pill.prio{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+  .keyflag{display:inline-flex;margin-left:5px;color:var(--danger);vertical-align:-2px}
+  .keyflag svg{width:13px;height:13px}
+  .btn.icon.verified{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+  .overdue{color:var(--danger)}
+  .fnote{color:var(--muted);font-size:13px;margin-top:2px}
+  .ftable{display:grid}
+  .frow{display:grid;grid-template-columns:minmax(170px,1.4fr) minmax(110px,1fr) 96px minmax(150px,1.3fr) 172px;gap:12px;align-items:center;padding:10px 16px;border-top:1px solid var(--line)}
+  .fhead{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--panel-2);padding:8px 16px}
+  .frow .fc a{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;min-width:0}
+  .frow .fc a span{display:flex;flex-direction:column;min-width:0}
+  .frow .fc small{color:var(--muted);font-size:12px}
+  .frow .avatar{width:32px;height:32px;font-size:12px}
+  .frow small.fnote{display:block}
+  .fwhen{font-size:12px;color:var(--muted);margin-left:4px}
+  .frow.od{box-shadow:inset 3px 0 0 var(--danger)} .frow.od .fwhen{color:var(--danger);font-weight:600}
+  .frow.td{box-shadow:inset 3px 0 0 var(--warn)} .frow.td .fwhen{color:var(--warn);font-weight:600}
+  .facts{display:flex;gap:6px;justify-content:flex-end}
+  @media (max-width:860px){ .frow{grid-template-columns:1fr auto;row-gap:4px} .frow>span:nth-child(2),.frow>span:nth-child(3){display:none} .fhead{display:none} .frow .facts{grid-column:1/-1;justify-content:flex-start} }
+  .logform input[name=promise],.logform input[name=nextAction]{flex:1 1 220px}
+  .nextdate{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+  .logbtns2{display:flex;gap:6px;margin-left:auto}
+  .tn.tp span,.tn.tx span{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-right:6px;padding:0 6px;border-radius:4px}
+  .tn.tp span{background:var(--warn-soft);color:var(--warn)} .tn.tx span{background:var(--accent-soft);color:var(--accent)}
+  .ovhead{position:relative} .ovreview{position:absolute;right:0;top:4px}
+  @media (max-width:700px){ .ovreview{position:static;margin-bottom:10px} }
+  .progress{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin:0 0 16px}
+  .progress span{display:block;height:100%;background:var(--ok);border-radius:999px;transition:width .3s}
+  .steps{list-style:none;margin:0 0 24px;padding:0;display:grid;gap:10px}
+  .step{display:flex;gap:14px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .step.done{background:color-mix(in srgb,var(--ok-soft) 50%,var(--panel))}
+  .step.done .steptitle{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--ink) 35%,transparent)}
+  .stepcheck{position:relative;padding-top:2px;cursor:pointer}
+  .stepcheck input{position:absolute;opacity:0;width:22px;height:22px;margin:0;cursor:pointer}
+  .stepcheck .cb{width:22px;height:22px}
+  .stepcheck input:focus-visible + .cb{outline:2px solid var(--accent);outline-offset:2px}
+  .step.done .cb{background:var(--ok);border-color:var(--ok)}
+  .stepbody{flex:1;min-width:0;display:grid;gap:4px}
+  .steptitle{font-weight:650;font-size:15px;display:flex;align-items:center;gap:8px}
+  .steptitle .num{font-family:var(--font-display);font-weight:400;color:var(--accent);font-size:20px;line-height:1}
+  .stepbody .sub{color:var(--muted);font-size:13px}
+  .stepacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mini{display:inline-flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:inherit;text-decoration:none;background:var(--panel)}
+  .mini a{color:inherit;text-decoration:none;font-weight:600}
+  .mini .avatar{width:24px;height:24px;font-size:10px}
+  .stepacts .mini{border-radius:12px;flex-wrap:wrap}
+  .sect{font-family:var(--font-display);font-weight:400;font-size:26px;margin:4px 0 12px}
+  .cleanup{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .cleanup .ovcard{padding:14px 14px 12px;display:grid;gap:8px;align-content:start}
+  .cleanup .ovcard h3{margin:0}
+  .cleanup .ovcard p{margin:0}
+  .cleanup .mini{border-radius:10px;justify-content:space-between;display:flex}
+  .cleanup .mini .muted{font-size:12px;margin-left:auto}
+  @media (max-width:900px){ .cleanup{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -594,7 +653,11 @@
         <div class="field"><label for="f_anniversary">Anniversary</label><input id="f_anniversary" name="anniversary" type="date"></div>
         <div class="field"><label for="f_howMet">How you met</label><input id="f_howMet" name="howMet" placeholder="e.g. Web Summit 2026"></div>
         <div class="field"><label for="f_introducedBy">Introduced by</label><input id="f_introducedBy" name="introducedBy" list="contactNames" autocomplete="off"></div>
+        <div class="field"><label for="f_category">Category</label><input id="f_category" name="category" list="categoryList" autocomplete="off" placeholder="Work, Students, Faculty…"></div>
+        <div class="field"><label for="f_priority">Priority</label><select id="f_priority" name="priority" class="sel"><option value="">None</option><option value="key">Key contact · every 30–60 days</option><option value="active">Active project · weekly</option><option value="general">General networking · every 3–6 months</option></select></div>
         <div class="field"><label for="f_keepInTouch">Keep in touch</label><select id="f_keepInTouch" name="keepInTouch" class="sel"></select></div>
+        <div class="field"><label for="f_nextFollowUp">Next follow-up</label><input id="f_nextFollowUp" name="nextFollowUp" type="date"></div>
+        <div class="field full"><label for="f_followUpNote">Follow-up note</label><input id="f_followUpNote" name="followUpNote" placeholder="e.g. Before semester starts, send the proposal"></div>
         <div class="field"><label for="f_website">Website</label><input id="f_website" name="website" placeholder="https://"></div>
         <div class="field full"><label for="f_tags">Tags <span style="font-weight:400">(comma separated)</span></label><input id="f_tags" name="tags" placeholder="family, work"></div>
         <div class="field full"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes" rows="3"></textarea></div>
@@ -689,6 +752,7 @@
 
 <div class="toast" id="toast"></div>
 <datalist id="contactNames"></datalist>
+<datalist id="categoryList"></datalist>
 <input type="file" id="cardInput" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" hidden>
 
 <!-- Scan card modal -->
@@ -706,9 +770,13 @@
 <script>
 (() => {
   // ---------- state ----------
-  const FIELDS = ["firstName","lastName","phone","email","company","jobTitle","address","birthday","anniversary","website","howMet","introducedBy","keepInTouch","tags","notes","favorite"];
+  const FIELDS = ["firstName","lastName","phone","email","company","jobTitle","address","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
   const ITYPES = { call:{label:"Call",icon:"📞"}, email:{label:"Email",icon:"✉️"}, meeting:{label:"Meeting",icon:"🤝"}, message:{label:"Message",icon:"💬"}, other:{label:"Note",icon:"📝"} };
-  const KIT = [["","Off"],["7","Every week"],["14","Every 2 weeks"],["30","Every month"],["60","Every 2 months"],["90","Every 3 months"],["180","Every 6 months"],["365","Every year"]];
+  const KIT = [["","Off"],["7","Every week"],["14","Every 2 weeks"],["30","Every month"],["45","Every 6 weeks"],["60","Every 2 months"],["90","Every 3 months"],["120","Every 4 months"],["180","Every 6 months"],["365","Every year"]];
+  const CATEGORIES = [["Work","#2747d0"],["Students","#0e7f8f"],["Faculty","#7a4fd0"],["Vendors","#b45309"],["Friends & Family","#db2777"],["Alumni","#1c7a4b"],["Potential Employers","#c2410c"],["Important Services","#475569"]];
+  const catColor = name => (CATEGORIES.find(c => c[0].toLowerCase() === String(name).toLowerCase()) || [0, ["#2747d0","#0e7f8f","#7a4fd0","#b45309","#db2777","#1c7a4b","#c2410c","#475569"][[...String(name)].reduce((h,ch) => (h*31 + ch.charCodeAt(0)) >>> 0, 0) % 8]])[1];
+  const PRIORITY = { key: { label: "Key contact", hint: "High-value · every 30–60 days", kit: "45" }, active: { label: "Active project", hint: "Weekly", kit: "7" }, general: { label: "General networking", hint: "Every 3–6 months", kit: "120" } };
+  const PROFESSIONAL = new Set(["Work","Faculty","Vendors","Potential Employers","Alumni"]);
   const kitLabel = v => (KIT.find(k => k[0] === String(v||"")) || ["", v ? `Every ${v} days` : "Off"])[1];
   let contacts = [];         // active contacts
   let trash = [];            // deleted contacts, kept 30 days (each has deletedAt)
@@ -731,6 +799,13 @@
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
   const ICON_PATHS = {"search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>", "import": "<path d=\"M12 3v12\"/><path d=\"m7 10 5 5 5-5\"/><path d=\"M5 21h14\"/>", "export": "<path d=\"M12 21V9\"/><path d=\"m7 14 5-5 5 5\"/><path d=\"M5 3h14\"/>", "camera": "<path d=\"M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>", "card": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"9\" cy=\"11\" r=\"2\"/><path d=\"M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2M14 10h4M14 13h3\"/>", "edit": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>", "star": "<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z\"/>", "copy": "<rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"m19 6-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/>", "phone": "<path d=\"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z\"/>", "mail": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"m3 7 9 6 9-6\"/>", "building": "<rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"1\"/><path d=\"M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2\"/>", "briefcase": "<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18\"/>", "pin": "<path d=\"M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z\"/><circle cx=\"12\" cy=\"9\" r=\"2.5\"/>", "cake": "<path d=\"M4 21v-9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9\"/><path d=\"M4 16c1.5 1 3 1 4 0s3-1 4 0 3 1 4 0 2.5-1 4 0\"/><path d=\"M2 21h20M12 10V7\"/>", "heart": "<path d=\"M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z\"/>", "globe": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8\"/>", "spark": "<path d=\"M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7\"/><path d=\"M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7\"/>", "tag": "<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z\"/><circle cx=\"7.5\" cy=\"7.5\" r=\"1.5\"/>", "note": "<path d=\"M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z\"/><path d=\"M14 3v6h6M8 13h8M8 17h5\"/>", "message": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z\"/>", "calendar": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "bell": "<path d=\"M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.7 21a2 2 0 0 1-3.4 0\"/>", "refresh": "<path d=\"M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8\"/><path d=\"M21 3v5h-5M3 21v-5h5\"/>", "back": "<path d=\"m15 18-6-6 6-6\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "trend": "<path d=\"m22 17-8.5-8.5-5 5L2 7\"/><path d=\"M16 17h6v-6\"/>", "mobile": "<rect x=\"6\" y=\"2\" width=\"12\" height=\"20\" rx=\"2\"/><path d=\"M11 18h2\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5\"/>", "user": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/>", "book": "<path d=\"M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5Z\"/><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20M9 7h7M9 11h5\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "pen": "<path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>"};
+  Object.assign(ICON_PATHS, {
+    folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+    flag: '<path d="M4 21V4"/><path d="M4 4h12l-2 4 2 4H4"/>',
+    archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
+    shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'
+  });
   const ic = n => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n] || ""}</svg>`;
   const fullName = c => [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || c.company || c.email || c.phone || "Unnamed";
   const initials = c => {
@@ -766,12 +841,18 @@
       .filter(i => i && /^\d{4}-\d{2}-\d{2}/.test(String(i.date)))
       .map(i => {
         const o = { id: String(i.id || uid()), type: ITYPES[i.type] ? i.type : "other", date: String(i.date).slice(0,10), note: String(i.note || "").slice(0, 2000) };
+        if (i.promise) o.promise = String(i.promise).slice(0, 1000);
+        if (i.nextAction) o.nextAction = String(i.nextAction).slice(0, 1000);
         if (i.source) o.source = String(i.source);
         if (i.extId) o.extId = String(i.extId);
         return o;
       })
       .sort((a,b) => b.date.localeCompare(a.date));
     if (raw.syncedAt) c.syncedAt = String(raw.syncedAt);
+    if (!PRIORITY[c.priority]) c.priority = "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(c.nextFollowUp)) c.nextFollowUp = "";
+    if (raw.archived === true || raw.archived === "true") c.archived = true;
+    if (raw.verifiedAt && /^\d{4}-\d{2}-\d{2}/.test(raw.verifiedAt)) c.verifiedAt = String(raw.verifiedAt).slice(0, 10);
     if (raw.deletedAt && !isNaN(Date.parse(raw.deletedAt))) c.deletedAt = String(raw.deletedAt);
     if (typeof raw.photo === "string" && /^data:image\/(jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(raw.photo) && raw.photo.length < 3e6) c.photo = raw.photo;
     if (typeof raw.icon === "string" && raw.icon.trim() && [...raw.icon.trim()].length <= 4) c.icon = raw.icon.trim();
@@ -855,7 +936,10 @@
   function visible(){
     const q = query.toLowerCase().trim();
     return sorted(contacts).filter(c => {
+      if (filter === "archived" ? !c.archived : c.archived) return false;
       if (filter === "fav" && !c.favorite) return false;
+      if (filter === "key" && c.priority !== "key") return false;
+      if (catFilter && (catFilter === "none" ? c.category : String(c.category).toLowerCase() !== catFilter.toLowerCase())) return false;
       if (countryFilter && (countryFilter === "none" ? phoneCountry(c) : phoneCountry(c) !== countryFilter)) return false;
       if (filter.startsWith("tag:") && !tagList(c).includes(filter.slice(4))) return false;
       if (!q) return true;
@@ -870,6 +954,18 @@
     const favs = contacts.filter(c=>c.favorite).length;
     let h = `<button class="chip ${filter==="all"?"on":""}" data-f="all">All · ${contacts.length}</button>`;
     h += `<button class="chip ${filter==="fav"?"on":""}" data-f="fav">★ Favorites · ${favs}</button>`;
+    const keys = contacts.filter(c => c.priority === "key" && !c.archived).length;
+    if (keys || filter === "key") h += `<button class="chip ${filter==="key"?"on":""}" data-f="key">Key · ${keys}</button>`;
+    const cats = {};
+    for (const c of contacts){ if (c.archived) continue; const k = c.category || "none"; cats[k] = (cats[k] || 0) + 1; }
+    const catNames = Object.keys(cats).filter(k => k !== "none");
+    if (catNames.length || catFilter){
+      const order = [...CATEGORIES.map(c => c[0]).filter(n => cats[n]), ...catNames.filter(n => !CATEGORIES.some(c => c[0] === n)).sort()];
+      h += `<label class="chip ccfilter ${catFilter ? "on" : ""}" title="Filter by category">${catFilter && catFilter !== "none" ? `<span class="catdot" style="--c:${catColor(catFilter)}"></span>${esc(catFilter)}` : ic("folder") + "&nbsp;Category"}
+        <select id="catFilter" aria-label="Filter by category"><option value="">All categories</option>${order.map(n => `<option value="${esc(n)}" ${n===catFilter?"selected":""}>${esc(n)} · ${cats[n]}</option>`).join("")}${cats.none ? `<option value="none" ${catFilter==="none"?"selected":""}>No category · ${cats.none}</option>` : ""}</select></label>`;
+    }
+    const arch = contacts.filter(c => c.archived).length;
+    if (arch || filter === "archived") h += `<button class="chip ${filter==="archived"?"on":""}" data-f="archived">${ic("archive")}&nbsp;Archived · ${arch}</button>`;
     for (const t of tags) h += `<button class="chip ${filter==="tag:"+t?"on":""}" data-f="tag:${esc(t)}">${esc(t)}</button>`;
     const cc = {};
     for (const c of contacts){ if (!c.phone) continue; const iso = phoneCountry(c) || "none"; cc[iso] = (cc[iso] || 0) + 1; }
@@ -893,7 +989,7 @@
       const on = picked.has(c.id);
       h += `<div class="item ${!selMode && c.id===selectedId?"sel":""} ${on?"picked":""}" data-id="${esc(c.id)}" ${selMode ? `role="checkbox" aria-checked="${on}" tabindex="0"` : ""}>
         ${selMode ? `<span class="cb ${on?"on":""}" aria-hidden="true">${ic("check")}</span>` : ""}${avatar(c)}
-        <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div><div class="sub">${subFlag}${esc(sub)}</div></div></div>`;
+        <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}${c.priority === "key" ? `<span class="keyflag" title="Key contact">${ic("flag")}</span>` : ""}${c.category ? `<span class="catdot" style="--c:${catColor(c.category)}" title="${esc(c.category)}"></span>` : ""}</div><div class="sub">${subFlag}${esc(sub)}</div></div></div>`;
     }
     if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
     $("#list").innerHTML = h;
@@ -903,7 +999,7 @@
     $("#count").innerHTML = `<span>${items.length === contacts.length ? `${contacts.length.toLocaleString()} contact${contacts.length===1?"":"s"}` : `${items.length.toLocaleString()} of ${contacts.length.toLocaleString()} shown`}</span>${trash.length ? `<button type="button" class="linkbtn trashlink ${view === "trash" ? "on" : ""}" data-go="trash">${ic("trash")}Recently deleted · ${trash.length}</button>` : ""}`;
   }
 
-  const ROW_ICON = { phone:"phone", email:"mail", company:"building", jobTitle:"briefcase", address:"pin", birthday:"cake", anniversary:"heart", website:"globe", howMet:"spark", introducedBy:"link", tags:"tag", notes:"note" };
+  const ROW_ICON = { category:"folder", priority:"flag", nextFollowUp:"calendar", followUpNote:"calendar", phone:"phone", email:"mail", company:"building", jobTitle:"briefcase", address:"pin", birthday:"cake", anniversary:"heart", website:"globe", howMet:"spark", introducedBy:"link", tags:"tag", notes:"note" };
   function row(k, v, field){ return v ? `<div class="row editable" data-edit="${field}" title="Click to edit"><div class="k">${ic(ROW_ICON[field] || "note")}<span>${k}</span></div><div class="v">${v}</div><span class="pen" aria-hidden="true">${ic("pen")}</span></div>` : ""; }
   function fmtDate(d){ if(!d) return ""; const t = new Date(d + (d.length===10?"T00:00:00":"")); return isNaN(t) ? esc(d) : t.toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}); }
   function safeUrl(u){ if(!u) return ""; const s = /^https?:\/\//i.test(u) ? u : "https://"+u; try { const x=new URL(s); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch(e){ return ""; } }
@@ -931,7 +1027,7 @@
       <div class="dhead">
         <button class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">${ic("camera")}</span></button>
         <div class="editable-name" data-edit="firstName" title="Click to edit"><h2>${esc(fullName(c))} <span class="pen" aria-hidden="true">✎</span></h2>${role?`<div class="role">${esc(role)}</div>`:""}
-          <div class="pills">${st ? `<span class="pill s-${strengthClass(st)}" title="Relationship strength (0–100), from how often and how recently you've interacted">${strengthLabel(st)} · ${st}</span>` : ""}${last ? `<span class="pill">Last contacted ${agoText(last)}</span>` : `<span class="pill">Never contacted</span>`}</div></div>
+          <div class="pills">${c.category ? catPill(c.category) : ""}${c.priority ? `<span class="pill prio">${ic("flag")}${PRIORITY[c.priority].label}</span>` : ""}${c.archived ? `<span class="pill">${ic("archive")}Archived</span>` : ""}${st ? `<span class="pill s-${strengthClass(st)}" title="Relationship strength (0–100), from how often and how recently you've interacted">${strengthLabel(st)} · ${st}</span>` : ""}${last ? `<span class="pill">Last contacted ${agoText(last)}</span>` : `<span class="pill">Never contacted</span>`}</div></div>
       </div>
       <div class="actions">
         <button class="btn primary" data-act="edit">${ic("edit")}Edit</button>
@@ -939,11 +1035,14 @@
         ${c.phone ? `<a class="btn" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${ic("phone")}Call</a>` : ""}
         ${c.email ? `<a class="btn" href="mailto:${esc(c.email)}">${ic("mail")}Email</a>` : ""}
         <span class="spacer"></span>
+        <button class="btn icon ${c.verifiedAt && daysAgo(c.verifiedAt) < 180 ? "verified" : ""}" data-act="verify" title="${c.verifiedAt ? `Details checked ${agoText(c.verifiedAt)} — mark checked again` : "Mark details as checked today"}" aria-label="Mark details as checked">${ic("shield")}</button>
+        <button class="btn icon" data-act="archive" title="${c.archived ? "Unarchive" : "Archive (hide from the list)"}" aria-label="${c.archived ? "Unarchive" : "Archive"}">${ic("archive")}</button>
         <button class="btn icon" data-act="export1" title="Export contact" aria-label="Export contact">${ic("export")}</button>
         <button class="btn icon" data-act="dup" title="Duplicate" aria-label="Duplicate">${ic("copy")}</button>
         <button class="btn icon danger" data-act="delete" title="Delete" aria-label="Delete">${ic("trash")}</button>
       </div>
       <div class="card">
+        ${row("Next follow-up", c.nextFollowUp ? `<b class="${c.nextFollowUp < today() ? "overdue" : ""}">${fmtShort(c.nextFollowUp)}</b> <span class="muted">· ${followWhen(c.nextFollowUp)}</span>${c.followUpNote ? `<div class="fnote">${esc(c.followUpNote)}</div>` : ""}` : (c.followUpNote ? esc(c.followUpNote) : ""), "nextFollowUp")}
         ${row("Phone", c.phone ? `${phoneDisplay(c)}<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>${(() => { const p = phoneParts(c.phone); return p.iso ? ` <span class="ccname">${esc(CBY[p.iso].name)}${p.intl ? "" : " · assumed"}</span>` : ""; })()}` : "", "phone")}
         ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "", "email")}
         ${row("Company", esc(c.company), "company")}
@@ -1144,7 +1243,7 @@
 
   // ---------- views & routing ----------
   let view = "contacts";
-  const HASH = { "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
+  const HASH = { "review": "weekly-review", "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
   function viewFromHash(){ const h = location.hash.slice(1); return Object.keys(HASH).find(k => HASH[k] === h) || "contacts"; }
   function setView(v){
     view = v;
@@ -1165,7 +1264,8 @@
   function render(){
     renderFilters(); renderList();
     $("#app").classList.toggle("dupview", view !== "contacts");
-    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else renderDups();
+    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else if (view === "review") renderReview(); else renderDups();
+    $("#categoryList").innerHTML = [...new Set([...CATEGORIES.map(c => c[0]), ...contacts.map(c => c.category).filter(Boolean)])].map(n => `<option value="${esc(n)}">`).join("");
     $("#contactNames").innerHTML = sorted(contacts).map(c => `<option value="${esc(fullName(c))}">`).join("");
     renderBadges();
   }
@@ -1211,6 +1311,8 @@
   async function saveContact(raw, id){
     const now = new Date().toISOString();
     let c;
+    const oldP = id ? (contacts.find(x => x.id === id) || {}).priority || "" : "";
+    if (raw.priority !== undefined && raw.priority !== oldP && PRIORITY[raw.priority] && (!raw.keepInTouch || raw.keepInTouch === PRIORITY[oldP]?.kit)) raw.keepInTouch = PRIORITY[raw.priority].kit;
     if (id){
       const old = contacts.find(x=>x.id===id);
       c = normalize({ ...old, ...raw, id, createdAt: old?.createdAt, updatedAt: now });
@@ -1243,7 +1345,8 @@
   const EDIT_ROWS = [
     ["phone","Phone","tel"],["email","Email","email"],["company","Company","text"],["jobTitle","Job title","text"],
     ["address","Address","text"],["birthday","Birthday","date"],["anniversary","Anniversary","date"],["website","Website","url"],
-    ["howMet","How you met","text"],["introducedBy","Introduced by","text"],["keepInTouch","Keep in touch","select"],
+    ["category","Category","category"],["priority","Priority","priority"],["keepInTouch","Keep in touch","select"],["nextFollowUp","Next follow-up","date"],["followUpNote","Follow-up note","text"],
+    ["howMet","How you met","text"],["introducedBy","Introduced by","text"],
     ["tags","Tags","text"],["notes","Notes","textarea"]
   ];
   function startInlineEdit(field){
@@ -1282,6 +1385,8 @@
   function renderInlineEditor(c){
     const inp = (name, label, type, val) => type === "textarea"
       ? `<textarea name="${name}" id="i_${name}" rows="3" aria-label="${label}">${esc(val)}</textarea>`
+      : type === "category" ? `<input name="${name}" id="i_${name}" list="categoryList" autocomplete="off" value="${esc(val)}" aria-label="${label}" placeholder="Work, Students, Faculty…">`
+      : type === "priority" ? `<select name="${name}" id="i_${name}" aria-label="${label}"><option value="">None</option>${Object.entries(PRIORITY).map(([k,p]) => `<option value="${k}" ${val===k?"selected":""}>${p.label} · ${p.hint.toLowerCase()}</option>`).join("")}</select>`
       : type === "select" ? `<select name="${name}" id="i_${name}" aria-label="${label}">${KIT.map(([v,l]) => `<option value="${v}" ${String(val||"")===v?"selected":""}>${l}</option>`).join("")}</select>`
       : `<input name="${name}"${name==="introducedBy"?' list="contactNames" autocomplete="off"':""} id="i_${name}" type="${type}" value="${esc(val)}" aria-label="${label}"${name==="tags"?' placeholder="family, work"':""}${name==="website"?' placeholder="https://"':""}>`;
     const open = $("#inlineForm");
@@ -1333,7 +1438,7 @@
   }
 
   // ---------- formats: export ----------
-  const CSV_COLS = [["firstName","First Name"],["lastName","Last Name"],["phone","Phone"],["email","Email"],["company","Company"],["jobTitle","Job Title"],["address","Address"],["birthday","Birthday"],["anniversary","Anniversary"],["website","Website"],["howMet","How We Met"],["introducedBy","Introduced By"],["keepInTouch","Keep In Touch (days)"],["tags","Tags"],["notes","Notes"],["favorite","Favorite"],["_last","Last Contacted"],["_strength","Relationship Strength"]];
+  const CSV_COLS = [["firstName","First Name"],["lastName","Last Name"],["phone","Phone"],["email","Email"],["company","Company"],["jobTitle","Job Title"],["address","Address"],["birthday","Birthday"],["anniversary","Anniversary"],["website","Website"],["howMet","How We Met"],["introducedBy","Introduced By"],["keepInTouch","Keep In Touch (days)"],["category","Category"],["priority","Priority"],["nextFollowUp","Next Follow-up"],["followUpNote","Follow-up Note"],["tags","Tags"],["notes","Notes"],["favorite","Favorite"],["_last","Last Contacted"],["_strength","Relationship Strength"]];
   const csvCell = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   function toCSV(items){
     const lines = [CSV_COLS.map(c=>c[1]).join(",")];
@@ -1369,6 +1474,7 @@
     csv:  { label:"CSV",   desc:"Excel, Google Sheets, Outlook", ext:"csv",  make:toCSV },
     json: { label:"JSON",  desc:"Full backup, re-importable",    ext:"json", make:toJSON },
     vcf:  { label:"vCard", desc:"Phones, Gmail, iCloud, Outlook", ext:"txt", make:toVCard },
+    outlook: { label:"Outlook CSV", desc:"Outlook People & Microsoft Contacts import", ext:"csv", make:(items) => toOutlook(items) },
   };
   function slug(s){ return (s||"contacts").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "contacts"; }
 
@@ -1394,7 +1500,7 @@
   }
   function exportFileName(){
     const base = exportCtx.single ? slug(exportCtx.label) : "contacts-" + new Date().toISOString().slice(0,10);
-    return exportFmt === "vcf" ? base + ".vcf.txt" : base + "." + FORMATS[exportFmt].ext;
+    return exportFmt === "vcf" ? base + ".vcf.txt" : exportFmt === "outlook" ? base + "-outlook.csv" : base + "." + FORMATS[exportFmt].ext;
   }
   $("#fmtSeg").addEventListener("click", e => { const o = e.target.closest("[data-fmt]"); if (o){ exportFmt = o.dataset.fmt; renderExport(); } });
   $("#copyExport").addEventListener("click", async () => {
@@ -1436,6 +1542,10 @@
     if (s.includes("introduced") || s.includes("referredby") || s.includes("referral")) return "introducedBy";
     if (s.includes("anniversary")) return "anniversary";
     if (s.includes("keepintouch") || s.includes("followupdays")) return "keepInTouch";
+    if (s === "category" || s === "group") return "category";
+    if (s === "priority") return "priority";
+    if (s.includes("nextfollowup")) return "nextFollowUp";
+    if (s.includes("followupnote")) return "followUpNote";
     if (s.includes("lastcontacted") || s.includes("strength")) return null;
     if (/^(firstname|givenname|first)$/.test(s)) return "firstName";
     if (/^(lastname|familyname|surname|last)$/.test(s)) return "lastName";
@@ -1677,13 +1787,16 @@
       <form id="logForm" class="logform" ${logDraft ? "" : "hidden"} novalidate>
         <select name="type">${Object.entries(ITYPES).map(([k,t]) => `<option value="${k}" ${logDraft?.type===k?"selected":""}>${t.icon} ${t.label}</option>`).join("")}</select>
         <input type="date" name="date" value="${today()}" max="${today()}" required>
-        <input name="note" placeholder="Short note — what did you talk about?" maxlength="2000">
-        <button type="submit" class="btn primary sm">Save</button>
-        <button type="button" class="btn sm" data-act="cancelLog">Cancel</button>
+        <input name="note" placeholder="What was discussed?" maxlength="2000" aria-label="What was discussed?">
+        <input name="promise" placeholder="Any promises made? (optional)" maxlength="1000" aria-label="Promises made">
+        <input name="nextAction" placeholder="Next action (optional)" maxlength="1000" aria-label="Next action">
+        <label class="nextdate">by <input type="date" name="nextDate" min="${today()}" aria-label="Next action date"></label>
+        <span class="logbtns2"><button type="submit" class="btn primary sm">Save</button>
+        <button type="button" class="btn sm" data-act="cancelLog">Cancel</button></span>
       </form>
       ${items.length ? `<ul class="timeline">${items.slice(0, SHOW).map(i => `<li>
           <span class="ti t-${i.type}">${ic(TYPE_ICON[i.type])}</span>
-          <div class="tb"><div><b>${ITYPES[i.type].label}</b> · <span class="muted">${fmtShort(i.date)} (${agoText(i.date)})</span>${i.source ? ` <span class="pill src">${i.source === "gmail" ? "Gmail" : "Calendar"}</span>` : ""}</div>${i.note ? `<div class="tn">${esc(i.note)}</div>` : ""}</div>
+          <div class="tb"><div><b>${ITYPES[i.type].label}</b> · <span class="muted">${fmtShort(i.date)} (${agoText(i.date)})</span>${i.source ? ` <span class="pill src">${i.source === "gmail" ? "Gmail" : "Calendar"}</span>` : ""}</div>${i.note ? `<div class="tn">${esc(i.note)}</div>` : ""}${i.promise ? `<div class="tn tp"><span>Promised</span>${esc(i.promise)}</div>` : ""}${i.nextAction ? `<div class="tn tx"><span>Next</span>${esc(i.nextAction)}</div>` : ""}</div>
           <button class="x" data-delint="${esc(i.id)}" title="Remove" aria-label="Remove this entry">✕</button></li>`).join("")}</ul>
           ${items.length > SHOW ? `<p class="note">${items.length - SHOW} older entries not shown (they still count, and are included in JSON exports).</p>` : ""}`
         : `<p class="note" style="margin:6px 0 12px">No interactions logged yet. Log a call, email or meeting to start tracking this relationship.</p>`}
@@ -1701,8 +1814,10 @@
 
   // ---------- reminders ----------
   function reminderData(){
-    const events = [], due = [];
+    const events = [], due = [], follow = [];
     for (const c of contacts){
+      if (c.archived) continue;
+      if (c.nextFollowUp) follow.push(c);
       for (const [field, kind] of [["birthday","birthday"],["anniversary","anniversary"]]){
         const o = nextOcc(c[field]); if (o && o.inDays <= 14) events.push({ c, kind, ...o });
       }
@@ -1710,21 +1825,24 @@
     }
     events.sort((a,b) => a.inDays - b.inDays || fullName(a.c).localeCompare(fullName(b.c)));
     due.sort((a,b) => (b.since ?? 1e9) - b.every - ((a.since ?? 1e9) - a.every) || fullName(a.c).localeCompare(fullName(b.c)));
-    return { events, due };
+    follow.sort((a,b) => a.nextFollowUp.localeCompare(b.nextFollowUp));
+    return { events, due, follow };
   }
-  function reminderCount(){ const r = reminderData(); return r.due.length + r.events.filter(e => e.inDays <= 7).length; }
+  function reminderCount(){ const r = reminderData(); return r.due.length + r.events.filter(e => e.inDays <= 7).length + r.follow.filter(c => c.nextFollowUp <= today()).length; }
 
   function renderReminders(){
     $("#app").classList.remove("viewing");
-    const { events, due } = reminderData();
+    const { events, due, follow } = reminderData();
     const tracked = contacts.filter(c => +c.keepInTouch).length;
     const fading = contacts.filter(c => (c.interactions||[]).length && strength(c) < 15 && !followUp(c)?.due)
       .sort((a,b) => strength(a) - strength(b)).slice(0, 5);
     const person = c => `${avatar(c)}`;
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Reminders</h2>
       <p>Birthdays, anniversaries and people it's time to get back in touch with.</p></div>
+      <button class="btn primary" data-go="review">${ic("list")}Weekly review</button>
       ${mcp ? `<button class="btn" data-ract="syncAll" id="syncAllBtn">${ic("refresh")}Sync all from Gmail &amp; Calendar</button>` : ""}</div>
       <div id="syncAllStatus" class="note" aria-live="polite" style="margin:-8px 0 14px"></div>`;
+    h += followTable(follow);
 
     h += `<div class="dupgroup"><div class="gh"><span class="gi">${ic("gift")}</span><span class="key">Coming up · next 14 days</span><span class="n">${events.length}</span></div>`;
     h += events.length ? events.map(e => `<div class="dupitem ${e.inDays===0?"kept":""}">${person(e.c)}
@@ -1793,8 +1911,10 @@
     const f = e.target, date = f.elements.date.value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ toast("Pick a date"); return; }
     logDraft = null;
-    await addInteraction(c, { type: f.elements.type.value, date, note: f.elements.note.value.trim() });
-    toast("Interaction logged");
+    const promise = f.elements.promise.value.trim(), nextAction = f.elements.nextAction.value.trim(), nextDate = f.elements.nextDate.value;
+    const n = await addInteraction(c, { type: f.elements.type.value, date, note: f.elements.note.value.trim(), promise, nextAction });
+    if (nextDate || nextAction){ await patchContact(n.id, { nextFollowUp: nextDate || n.nextFollowUp || addDays(today(), 7), followUpNote: nextAction || n.followUpNote }); toast(`Logged — follow-up set for ${fmtShort(contacts.find(x => x.id === n.id).nextFollowUp)}`); }
+    else toast("Interaction logged");
   });
   $("#main").addEventListener("change", async e => {
     if (!e.target.matches("select[data-kit]")) return;
@@ -2289,7 +2409,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     const tile = (n, label, sub, go, tone = "") => `<button type="button" class="tile ${tone}" ${go ? `data-go="${go}"` : "disabled"}><span class="tn">${n.toLocaleString()}</span><span class="tl">${label}</span>${sub ? `<span class="ts">${sub}</span>` : ""}</button>`;
     const prow = (c, sub, right = "") => `<a href="#" class="prow" data-goto="${esc(c.id)}">${avatar(c)}<span class="meta"><span class="nm">${esc(fullName(c))}</span><span class="sub">${sub}</span></span>${right}</a>`;
     return `<div class="overview">
-      <div class="ovhead"><h2>Address book</h2><p>${contacts.length.toLocaleString()} people · pick someone from the list, or start with what needs you today.</p></div>
+      <div class="ovhead"><button class="btn primary ovreview" data-go="review">${ic("list")}Weekly review</button><h2>Address book</h2><p>${contacts.length.toLocaleString()} people · pick someone from the list, or start with what needs you today.</p></div>
       <div class="tiles">
         ${tile(contacts.length, "Contacts", favs ? `${favs} favorite${favs===1?"":"s"}` : "", "")}
         ${tile(events.length, "Coming up", "birthdays & anniversaries, 14 days", "reminders", events.length ? "warm" : "")}
@@ -2356,7 +2476,9 @@ address = one line. Do not invent anything that is not visible on the card. If t
     bar.innerHTML = `<div class="bulkhead"><b>${n.toLocaleString()}</b> selected</div>
       <div class="bulkacts">
         <button class="btn sm" data-bulk="fav" ${n ? "" : "disabled"}>${ic("star")}${allFav ? "Unfavorite" : "Favorite"}</button>
+        <button class="btn sm" data-bulk="organize" ${n ? "" : "disabled"}>${ic("folder")}Category</button>
         <button class="btn sm" data-bulk="tag" ${n ? "" : "disabled"}>${ic("tag")}Tag</button>
+        <button class="btn sm" data-bulk="archive" ${n ? "" : "disabled"}>${ic("archive")}${n && list.every(c => c.archived) ? "Unarchive" : "Archive"}</button>
         <button class="btn sm" data-bulk="kit" ${n ? "" : "disabled"}>${ic("bell")}Keep in touch</button>
         <button class="btn sm" data-bulk="export" ${n ? "" : "disabled"}>${ic("export")}Export</button>
         <button class="btn sm" data-bulk="merge" ${n >= 2 ? "" : "disabled"} title="Combine the selected contacts into one">${ic("users")}Merge</button>
@@ -2366,7 +2488,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
   async function saveMany(list){ for (const c of list) await persist(c); }
   function updatePicked(fn){
     const now = new Date().toISOString(), changed = [];
-    contacts = contacts.map(c => { if (!picked.has(c.id)) return c; const n = normalize({ ...fn({ ...c }), updatedAt: now }); changed.push(n); return n; });
+    contacts = contacts.map(c => { if (!picked.has(c.id)) return c; const r = { ...fn({ ...c }), updatedAt: now }; if (r.archived === false) delete r.archived; const n = normalize(r); changed.push(n); return n; });
     render(); renderBulk();
     return saveMany(changed).then(() => changed.length);
   }
@@ -2436,6 +2558,28 @@ address = one line. Do not invent anything that is not visible on the card. If t
             toast(v ? `Reminder set for ${k} contact${k===1?"":"s"}: ${kitLabel(v).toLowerCase()}` : `Reminders turned off for ${k} contact${k===1?"":"s"}`);
           });
         break;
+      case "organize":
+        openBulk(`Organize ${n === 1 ? "1 contact" : n.toLocaleString() + " contacts"}`,
+          `<div class="field"><label for="bulkCat">Category</label><input id="bulkCat" list="categoryList" autocomplete="off" placeholder="Leave empty to keep each one's category"></div>
+           <label class="keep" style="margin:-4px 0 12px"><input type="checkbox" id="bulkCatClear"> Remove their category instead</label>
+           <div class="field"><label for="bulkPrio">Priority</label><select id="bulkPrio"><option value="-">Keep as is</option><option value="">None</option>${Object.entries(PRIORITY).map(([k,p]) => `<option value="${k}">${p.label} · ${p.hint.toLowerCase()}</option>`).join("")}</select></div>
+           <p class="note">Choosing a priority also sets their keep-in-touch reminder, unless they already have one of their own.</p>`,
+          "Apply", async () => {
+            const cat = $("#bulkCat").value.trim(), clear = $("#bulkCatClear").checked, prio = $("#bulkPrio").value;
+            const k = await updatePicked(c => {
+              const o = { ...c };
+              if (clear) o.category = ""; else if (cat) o.category = cat;
+              if (prio !== "-"){ if (PRIORITY[prio] && (!o.keepInTouch || o.keepInTouch === PRIORITY[o.priority]?.kit)) o.keepInTouch = PRIORITY[prio].kit; o.priority = prio; }
+              return o;
+            });
+            toast(`Updated ${k} contact${k===1?"":"s"}`);
+          });
+        break;
+      case "archive": {
+        const val = !list.every(c => c.archived);
+        updatePicked(c => ({ ...c, archived: val })).then(k => { toast(`${val ? "Archived" : "Unarchived"} ${k} contact${k===1?"":"s"}`); });
+        break;
+      }
       case "export":
         openExport(sorted(list), n === 1 ? fullName(list[0]) : "contacts", n === 1);
         break;
@@ -2693,6 +2837,129 @@ address = one line. Do not invent anything that is not visible on the card. If t
     toast(`Showing ${b.dataset.ccf === "none" ? "numbers without a country code" : CBY[b.dataset.ccf].name + " numbers"}`);
   });
 
+  // ---------- categories, follow-ups, archive, verify ----------
+  let catFilter = "";
+  const catPill = name => `<span class="pill catpill" style="--c:${catColor(name)}"><span class="catdot" style="--c:${catColor(name)}"></span>${esc(name)}</span>`;
+  function followWhen(d){ const n = dayNum(d) - dayNum(today()); return n < 0 ? `${-n} day${n===-1?"":"s"} overdue` : n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`; }
+  async function patchContact(id, patch){
+    const c = contacts.find(x => x.id === id); if (!c) return null;
+    const raw = { ...c, ...patch, updatedAt: new Date().toISOString() };
+    if (patch.archived === false) delete raw.archived;
+    const n = normalize(raw);
+    contacts = contacts.map(x => x.id === id ? n : x);
+    render(); await persist(n); return n;
+  }
+  const addDays = (d, k) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + k); return `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`; };
+  function followTable(list){
+    let h = `<div class="dupgroup"><div class="gh"><span class="gi">${ic("calendar")}</span><span class="key">Follow-ups</span><span class="n">${list.length}</span></div>`;
+    if (!list.length) return h + `<div class="dupitem"><div class="meta sub">No follow-ups scheduled. Set <b>Next follow-up</b> on a contact, or add a next action when you log a conversation.</div></div></div>`;
+    h += `<div class="ftable" role="table"><div class="frow fhead" role="row"><span role="columnheader">Contact</span><span role="columnheader">Role</span><span role="columnheader">Last contact</span><span role="columnheader">Next follow-up</span><span></span></div>`;
+    h += list.map(c => {
+      const od = c.nextFollowUp < today(), td = c.nextFollowUp === today();
+      return `<div class="frow ${od ? "od" : td ? "td" : ""}" role="row">
+        <span role="cell" class="fc"><a href="#" data-goto="${esc(c.id)}">${avatar(c)}<span><b>${esc(fullName(c))}</b>${c.category ? `<small>${esc(c.category)}</small>` : ""}</span></a></span>
+        <span role="cell" class="muted">${esc([c.jobTitle, c.company].filter(Boolean).join(", ") || "—")}</span>
+        <span role="cell">${lastContacted(c) ? fmtShort(lastContacted(c)) : `<span class="muted">Never</span>`}</span>
+        <span role="cell"><b>${fmtShort(c.nextFollowUp)}</b> <span class="fwhen">${followWhen(c.nextFollowUp)}</span>${c.followUpNote ? `<small class="fnote">${esc(c.followUpNote)}</small>` : ""}</span>
+        <span role="cell" class="facts"><button class="btn sm" data-fu="done" data-id="${esc(c.id)}" title="Log it as done and clear the date">${ic("check")}Done</button><button class="btn sm" data-fu="snooze" data-id="${esc(c.id)}" title="Move it a week later">+1 week</button></span></div>`;
+    }).join("");
+    return h + `</div></div>`;
+  }
+  $("#main").addEventListener("click", async e => {
+    const b = e.target.closest("[data-fu]"); if (!b) return;
+    const c = contacts.find(x => x.id === b.dataset.id); if (!c) return;
+    if (b.dataset.fu === "snooze"){ await patchContact(c.id, { nextFollowUp: addDays(c.nextFollowUp < today() ? today() : c.nextFollowUp, 7) }); toast(`Moved to ${fmtShort(contacts.find(x => x.id === c.id).nextFollowUp)}`); }
+    else {
+      const n = normalize({ ...c, nextFollowUp: "", followUpNote: "", interactions: [...(c.interactions||[]), { id: uid(), type: "other", date: today(), note: "Followed up" + (c.followUpNote ? ": " + c.followUpNote : "") }], updatedAt: new Date().toISOString() });
+      contacts = contacts.map(x => x.id === c.id ? n : x); render(); await persist(n);
+      toast(`Follow-up with ${fullName(c)} done`);
+    }
+  });
+  document.addEventListener("change", e => { if (e.target.id === "catFilter"){ catFilter = e.target.value; renderFilters(); renderList(); } });
+
+  // ---------- weekly review ----------
+  function isoWeek(d = new Date()){
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${pad2(Math.ceil(((t - y) / 864e5 + 1) / 7))}`;
+  }
+  function reviewState(){ try { return JSON.parse(localStorage.getItem("cm.review." + isoWeek()) || "{}"); } catch(e){ return {}; } }
+  function setReviewStep(k, v){ const st = reviewState(); st[k] = v; try { localStorage.setItem("cm.review." + isoWeek(), JSON.stringify(st)); } catch(e){} }
+  function inactive(c){
+    if (c.archived || c.priority === "key" || c.favorite) return false;
+    const last = lastContacted(c);
+    return last ? daysAgo(last) > 365 : daysAgo(toDay(c.createdAt) || today()) > 365;
+  }
+  function needsCheck(c){ return !c.archived && (c.priority === "key" || PROFESSIONAL.has(c.category)) && (!c.verifiedAt || daysAgo(c.verifiedAt) > 180); }
+  function renderReview(){
+    $("#app").classList.remove("viewing");
+    const st = reviewState(), live = contacts.filter(c => !c.archived);
+    const added = live.filter(c => daysAgo(toDay(c.createdAt) || "1970-01-01") <= 7);
+    const noNotes = live.filter(c => (c.interactions||[]).some(i => daysAgo(i.date) <= 7 && !i.note && !i.source));
+    const { follow } = reminderData(); const dueF = follow.filter(c => c.nextFollowUp <= addDays(today(), 7));
+    const dupP = dupGroups("dup-phone").reduce((n,g) => n + g.items.length - 1, 0), dupN = dupGroups("dup-name").reduce((n,g) => n + g.items.length - 1, 0);
+    const important = live.filter(c => c.priority === "key" || c.favorite)
+      .sort((a,b) => (lastContacted(a) || "0000").localeCompare(lastContacted(b) || "0000")).slice(0, 3);
+    const steps = [
+      ["add", "Add new contacts", added.length ? `${added.length} added this week` : "Nobody added this week yet",
+        `<button class="btn sm" data-act="add">${ic("plus")}New contact</button><button class="btn sm" data-go="scan">${ic("card")}Scan</button>`],
+      ["notes", "Update notes", noNotes.length ? `${noNotes.length} conversation${noNotes.length===1?"":"s"} this week without a note` : "Every conversation this week has a note",
+        noNotes.slice(0, 4).map(c => `<a href="#" class="mini" data-goto="${esc(c.id)}">${avatar(c)}${esc(fullName(c))}</a>`).join("")],
+      ["follow", "Check follow-up reminders", dueF.length ? `${dueF.length} due in the next 7 days` : "Nothing due this week",
+        `<button class="btn sm" data-go="reminders">${ic("calendar")}Open follow-ups</button>`],
+      ["dups", "Remove duplicates", dupP + dupN ? `${dupP} by number · ${dupN} by name` : "No duplicates found",
+        dupP + dupN ? `<button class="btn sm" data-go="dup-phone">Numbers</button><button class="btn sm" data-go="dup-name">Names</button>` : ""],
+      ["reconnect", "Reconnect with 2–3 important people", important.length ? "Your key contacts and favorites you've talked to least recently:" : "Mark people as Key contact or favorite to get suggestions here",
+        important.map(c => `<span class="mini">${avatar(c)}<a href="#" data-goto="${esc(c.id)}">${esc(fullName(c))}</a><span class="muted">${lastContacted(c) ? agoText(lastContacted(c)) : "never"}</span><button class="btn sm" data-ract="log" data-type="call" data-id="${esc(c.id)}">${ic("phone")}Called</button><button class="btn sm" data-ract="log" data-type="message" data-id="${esc(c.id)}">${ic("message")}Messaged</button></span>`).join("")]
+    ];
+    const done = steps.filter(x => st[x[0]]).length;
+    const inact = live.filter(inactive), check = live.filter(needsCheck), bare = live.filter(c => !c.phone && !c.email);
+    let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Weekly review</h2>
+      <p>Ten minutes a week keeps your address book useful. Week ${isoWeek().split("-W")[1]} · ${done} of ${steps.length} done.</p></div></div>
+      <div class="progress"><span style="width:${done / steps.length * 100}%"></span></div>
+      <ol class="steps">${steps.map(([k, t, sub, acts], i) => `<li class="step ${st[k] ? "done" : ""}">
+        <label class="stepcheck"><input type="checkbox" data-step="${k}" ${st[k] ? "checked" : ""}><span class="cb ${st[k] ? "on" : ""}">${ic("check")}</span></label>
+        <div class="stepbody"><div class="steptitle"><span class="num">${i + 1}</span>${t}</div><div class="sub">${sub}</div>${acts ? `<div class="stepacts">${acts}</div>` : ""}</div></li>`).join("")}</ol>
+      <h3 class="sect">Monthly clean-up</h3>
+      <div class="cleanup">
+        <section class="ovcard"><h3>${ic("archive")}Archive inactive contacts</h3>
+          <p class="small muted">${inact.length ? `${inact.length} not in touch for over a year (key contacts and favorites are left out).` : "No inactive contacts."}</p>
+          ${inact.slice(0, 4).map(c => `<div class="mini">${avatar(c)}<a href="#" data-goto="${esc(c.id)}">${esc(fullName(c))}</a><span class="muted">${lastContacted(c) ? agoText(lastContacted(c)) : "never"}</span><button class="btn sm" data-rv="archive" data-id="${esc(c.id)}">Archive</button></div>`).join("")}
+          ${inact.length > 1 ? `<button class="btn sm" data-rv="archiveAll">${ic("archive")}Archive all ${inact.length}</button>` : ""}</section>
+        <section class="ovcard"><h3>${ic("shield")}Check key professional contacts</h3>
+          <p class="small muted">${check.length ? `${check.length} key or work-related contact${check.length===1?"":"s"} not checked in 6 months. Confirm their phone, email and job are still right.` : "All key professional contacts checked recently."}</p>
+          ${check.slice(0, 4).map(c => `<div class="mini">${avatar(c)}<a href="#" data-goto="${esc(c.id)}">${esc(fullName(c))}</a><span class="muted">${esc(c.category || PRIORITY[c.priority]?.label || "")}</span><button class="btn sm" data-rv="verify" data-id="${esc(c.id)}">${ic("check")}Still right</button></div>`).join("")}</section>
+        <section class="ovcard"><h3>${ic("phone")}Missing details</h3>
+          <p class="small muted">${bare.length ? `${bare.length} contact${bare.length===1?"":"s"} with no phone and no email.` : "Every contact has a phone or email."}</p>
+          ${bare.slice(0, 4).map(c => `<div class="mini">${avatar(c)}<a href="#" data-goto="${esc(c.id)}">${esc(fullName(c))}</a></div>`).join("")}</section>
+      </div></div>`;
+    $("#main").innerHTML = h;
+  }
+  $("#main").addEventListener("change", e => {
+    const cbx = e.target.closest("[data-step]"); if (!cbx) return;
+    setReviewStep(cbx.dataset.step, cbx.checked); renderReview();
+    if (Object.values(reviewState()).filter(Boolean).length === 5) toast("Weekly review done — nice work");
+  });
+  $("#main").addEventListener("click", async e => {
+    const b = e.target.closest("[data-rv]"); if (!b) return;
+    if (b.dataset.rv === "archive"){ await patchContact(b.dataset.id, { archived: true }); toast("Archived"); }
+    if (b.dataset.rv === "verify"){ await patchContact(b.dataset.id, { verifiedAt: today() }); toast("Marked as checked"); }
+    if (b.dataset.rv === "archiveAll"){
+      const list = contacts.filter(inactive);
+      askConfirm(`Archive ${list.length} contacts?`, `They'll be hidden from your list and reminders, but kept. You can find them under the <b>Archived</b> filter and unarchive them any time.`, "Archive", async () => {
+        const now = new Date().toISOString(), ids = new Set(list.map(c => c.id)), changed = [];
+        contacts = contacts.map(c => { if (!ids.has(c.id)) return c; const n = normalize({ ...c, archived: true, updatedAt: now }); changed.push(n); return n; });
+        render(); for (const c of changed) await persist(c); toast(`Archived ${changed.length} contacts`);
+      });
+    }
+  });
+
+  // ---------- Outlook CSV ----------
+  const OUTLOOK_COLS = [["First Name", c => c.firstName], ["Last Name", c => c.lastName], ["Company", c => c.company], ["Job Title", c => c.jobTitle],
+    ["E-mail Address", c => c.email], ["Mobile Phone", c => c.phone], ["Home Street", c => c.address], ["Birthday", c => c.birthday], ["Anniversary", c => c.anniversary],
+    ["Web Page", c => c.website], ["Referred By", c => c.introducedBy], ["Categories", c => [c.category, ...tagList(c)].filter(Boolean).join(";")],
+    ["Notes", c => [c.notes, c.howMet ? "How we met: " + c.howMet : "", c.nextFollowUp ? `Next follow-up: ${c.nextFollowUp}${c.followUpNote ? " — " + c.followUpNote : ""}` : ""].filter(Boolean).join("\n")]];
+  function toOutlook(items){ return [OUTLOOK_COLS.map(c => c[0]).join(","), ...items.map(c => OUTLOOK_COLS.map(([, f]) => csvCell(f(c) || "")).join(","))].join("\r\n"); }
+
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
   $("#importBtn").addEventListener("click", openImport);
@@ -2737,6 +3004,8 @@ address = one line. Do not invent anything that is not visible on the card. If t
       case "delete": if (c) confirmDelete(c); break;
       case "export1": if (c) openExport([c], fullName(c), true); break;
       case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); render(); await persist(c); } break;
+      case "archive": if (c){ await patchContact(c.id, { archived: !c.archived }); toast(c.archived ? `${fullName(c)} is back in your list` : `${fullName(c)} archived — find it under the Archived filter`); } break;
+      case "verify": if (c){ await patchContact(c.id, { verifiedAt: today() }); toast("Marked as checked today"); } break;
       case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", interactions: [], syncedAt: "", createdAt: now, updatedAt: now }); contacts.push(d); selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
     }
   });

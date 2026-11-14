@@ -8,6 +8,12 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 - **Multiple selection**: tick several contacts (Select, Ctrl/⌘-click, Shift-click for a range, or long-press on touch) to favorite, tag, set keep-in-touch reminders, export, merge or delete them in one go
 - **Recently deleted**: deleted and merged-away contacts are kept for 30 days (Undo right after deleting, Restore or Delete for good later), then removed automatically
 - **Country calling codes**: phone fields have a country picker with flags (+224, +1, +33 …); the country is detected from saved numbers, shown as a flag, filterable, and summarised in "Phone numbers by country"; numbers saved without a code use a default country you can change
+- **Categories** (Work, Students, Faculty, Vendors, Friends & Family, Alumni, Potential Employers, Important Services, or your own) with colours and a category filter
+- **Priority tiers** (Key contact every 30–60 days, Active project weekly, General networking every 3–6 months) that set the keep-in-touch reminder
+- **Follow-ups**: next follow-up date and note per contact, shown in a Contact / Role / Last contact / Next follow-up table on Reminders with Done and +1 week
+- **Conversation notes**: log what was discussed, promises made and the next action (which sets the follow-up)
+- **Weekly review** (10 minutes): add new contacts, update notes, check follow-ups, remove duplicates, reconnect with 2–3 important people — plus a monthly clean-up to archive inactive contacts, check key professional contacts and fill missing details
+- **Archive** and **checked on** dates for contacts; **Outlook CSV** export for Outlook People / Microsoft Contacts
 - Search by name, phone, email, company or tag; filter by favorites and tags
 - **Import** vCard (.vcf), CSV (Google / Outlook / generic) or JSON — one contact or many, with preview and duplicate skipping
 - **Export** a single contact or all contacts as CSV, JSON or vCard
