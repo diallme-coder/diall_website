@@ -183,6 +183,28 @@
   .pick .avatar{width:32px;height:32px;font-size:12px}
   @media (max-width:480px){ #storeTxt{display:none} }
   @media (max-width:480px){ .bottomnav{padding:0 2px env(safe-area-inset-bottom)} .bottomnav .ic{width:44px} .bottomnav button{font-size:11px} }
+  [hidden]{display:none!important}
+  /* photos & icons */
+  .avatar{overflow:hidden;position:relative}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .avatar.hasphoto{background:var(--line)}
+  .avatar.icon{font-size:20px;line-height:1}
+  .avatar.lg.icon{font-size:44px}
+  .pick .avatar.icon{font-size:16px}
+  .avbtn{position:relative;border:0;padding:0;background:none;cursor:pointer;border-radius:50%;flex:none}
+  .avbtn:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .avbtn .cam{position:absolute;right:-2px;bottom:-2px;width:30px;height:30px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;font-size:14px;box-shadow:var(--shadow);opacity:.9}
+  .avbtn:hover .avatar{filter:brightness(.92)}
+  .avprev{display:flex;justify-content:center;margin:4px 0 16px}
+  .avprev .avatar{width:112px;height:112px;font-size:40px}
+  .avprev .avatar.icon{font-size:58px}
+  .icongrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:6px}
+  .icongrid button{height:42px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:20px;cursor:pointer}
+  .icongrid button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);background:var(--accent-soft)}
+  .icongrid button.initials{font-size:13px;font-weight:700}
+  .swatches{display:flex;gap:8px;flex-wrap:wrap}
+  .swatches button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+  .swatches button.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--panel) inset}
   /* bottom navigation */
   :root{--nav-h:64px}
   .app{height:calc(100vh - var(--nav-h) - env(safe-area-inset-bottom));height:calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom))}
@@ -352,6 +374,29 @@
   </div>
 </div>
 
+<!-- Photo / icon modal -->
+<div class="scrim" id="avatarScrim">
+  <div class="modal" style="max-width:500px">
+    <header><h3>Photo or icon</h3><button type="button" class="btn ghost" data-close>✕</button></header>
+    <div class="body">
+      <div class="avprev" id="avPreview"></div>
+      <div class="row-btns" style="justify-content:center;margin-bottom:14px">
+        <button type="button" class="btn primary" id="avUpload">🖼️ Choose photo</button>
+        <button type="button" class="btn" id="avCamera">📷 Take photo</button>
+        <button type="button" class="btn danger" id="avRemove">Remove photo</button>
+      </div>
+      <p class="note" style="margin:0 0 6px">…or pick an icon</p>
+      <div class="icongrid" id="iconGrid"></div>
+      <p class="note" style="margin:12px 0 6px">Background colour</p>
+      <div class="swatches" id="swatches"></div>
+      <div class="err" id="avErr"></div>
+      <input type="file" id="avFile" accept="image/*" hidden>
+      <input type="file" id="avCam" accept="image/*" capture="user" hidden>
+    </div>
+    <footer><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" id="avSave">Save</button></footer>
+  </div>
+</div>
+
 <!-- Confirm modal -->
 <div class="scrim" id="confirmScrim">
   <div class="modal" style="max-width:420px">
@@ -431,6 +476,9 @@
       })
       .sort((a,b) => b.date.localeCompare(a.date));
     if (raw.syncedAt) c.syncedAt = String(raw.syncedAt);
+    if (typeof raw.photo === "string" && /^data:image\/(jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(raw.photo) && raw.photo.length < 3e6) c.photo = raw.photo;
+    if (typeof raw.icon === "string" && raw.icon.trim() && [...raw.icon.trim()].length <= 4) c.icon = raw.icon.trim();
+    if (typeof raw.avatarColor === "string" && /^#[0-9a-f]{6}$/i.test(raw.avatarColor)) c.avatarColor = raw.avatarColor;
     c.createdAt = raw.createdAt || new Date().toISOString();
     c.updatedAt = raw.updatedAt || c.createdAt;
     return c;
@@ -536,7 +584,7 @@
       if (g !== letter){ letter = g; h += `<div class="group">${g}</div>`; }
       const sub = c.phone || c.email || c.company || "";
       h += `<div class="item ${c.id===selectedId?"sel":""}" data-id="${esc(c.id)}">
-        <div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        ${avatar(c)}
         <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div><div class="sub">${esc(sub)}</div></div></div>`;
     }
     if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
@@ -568,7 +616,7 @@
     $("#main").innerHTML = `<div class="detail">
       <button class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
       <div class="dhead">
-        <div class="avatar lg" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        <button class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">📷</span></button>
         <div class="editable-name" data-edit="firstName" title="Click to edit"><h2>${esc(fullName(c))} <span class="pen" aria-hidden="true">✎</span></h2>${role?`<div class="role">${esc(role)}</div>`:""}
           <div class="pills">${st ? `<span class="pill s-${strengthClass(st)}" title="Relationship strength (0–100), from how often and how recently you've interacted">${strengthLabel(st)} · ${st}</span>` : ""}${last ? `<span class="pill">Last contacted ${agoText(last)}</span>` : `<span class="pill">Never contacted</span>`}</div></div>
       </div>
@@ -690,7 +738,7 @@
         <button class="btn sm primary" data-dact="merge" data-g="${esc(gk)}">Merge into one</button></div>`;
       for (const c of g.items){
         h += `<div class="dupitem ${c.id===keepId?"kept":""}">
-          <div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+          ${avatar(c)}
           <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div>
             <div class="sub">${esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No other details")} · added ${new Date(c.createdAt).toLocaleDateString()}</div></div>
           <div class="acts">
@@ -713,6 +761,7 @@
     for (const o of others){
       for (const f of FIELDS){
         if (f === "tags" || f === "favorite" || f === "notes") continue;
+        if (f === FIELDS[0]) for (const k of ["photo","icon","avatarColor"]) if (!m[k] && o[k]) m[k] = o[k];
         if (!m[f] && o[f]) m[f] = o[f];
       }
       m.favorite = m.favorite || o.favorite;
@@ -916,7 +965,7 @@
     $("#main").innerHTML = `<form class="detail" id="inlineForm" data-id="${esc(c.id)}" novalidate>
       <button type="button" class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
       <div class="dhead">
-        <div class="avatar lg" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        <button type="button" class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">📷</span></button>
         <div class="namegrid">
           <div class="field"><label for="i_firstName">First name</label>${inp("firstName","First name","text",c.firstName)}</div>
           <div class="field"><label for="i_lastName">Last name</label>${inp("lastName","Last name","text",c.lastName)}</div>
@@ -971,7 +1020,7 @@
     return lines.join("\r\n");
   }
   function toJSON(items){
-    const clean = items.map(c => { const o = {}; for (const f of FIELDS) o[f] = f==="tags" ? tagList(c) : c[f]; o.interactions=c.interactions||[]; o.createdAt=c.createdAt; o.updatedAt=c.updatedAt; return o; });
+    const clean = items.map(c => { const o = {}; for (const f of FIELDS) o[f] = f==="tags" ? tagList(c) : c[f]; o.interactions=c.interactions||[]; for (const k of ["photo","icon","avatarColor"]) if (c[k]) o[k]=c[k]; o.createdAt=c.createdAt; o.updatedAt=c.updatedAt; return o; });
     return JSON.stringify(items.length === 1 && exportCtx?.single ? clean[0] : clean, null, 2);
   }
   const vEsc = s => String(s ?? "").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
@@ -989,6 +1038,8 @@
       if (c.website) L.push(`URL:${vEsc(c.website)}`);
       if (tagList(c).length) L.push(`CATEGORIES:${tagList(c).map(vEsc).join(",")}`);
       if (c.notes) L.push(`NOTE:${vEsc(c.notes)}`);
+      const pm = c.photo && c.photo.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (pm){ const line = `PHOTO;ENCODING=b;TYPE=${pm[1].toUpperCase().replace("JPG","JPEG")}:${pm[2]}`; L.push(line.match(/.{1,75}/g).join("\r\n ")); }
       L.push("END:VCARD");
       return L.join("\r\n");
     }).join("\r\n");
@@ -1123,6 +1174,15 @@
           case "BDAY": { const d = val.replace(/^--/,"").match(/^(\d{4})-?(\d{2})-?(\d{2})/); o.birthday = d ? `${d[1]}-${d[2]}-${d[3]}` : ""; break; }
           case "URL": if (!o.website) o.website = vUnesc(val); break;
           case "NOTE": o.notes = vUnesc(val); break;
+          case "PHOTO": {
+            const v = val.replace(/\s+/g, "");
+            if (/^data:image\//i.test(v)) o.photo = v;
+            else if (/ENCODING=(b|BASE64)/i.test(m[2]) || /^[A-Za-z0-9+/=]{100,}$/.test(v)){
+              const t = (m[2].match(/TYPE=(\w+)/i) || [,"jpeg"])[1].toLowerCase().replace("jpg","jpeg");
+              o.photo = `data:image/${["jpeg","png","gif","webp"].includes(t) ? t : "jpeg"};base64,${v}`;
+            }
+            break;
+          }
           case "CATEGORIES": o.tags = vUnesc(val); break;
         }
       }
@@ -1200,6 +1260,7 @@
     const toAdd = pendingImport.filter(c => !(skip && c._dupe)).map(c => { const { _dupe, ...rest } = c; return rest; });
     if (!toAdd.length) return;
     $("#doImport").disabled = true;
+    await shrinkPhotos(toAdd, n => { $("#doImport").textContent = `Preparing photos… ${n}`; });
     contacts = contacts.concat(toAdd);
     if (toAdd.length === 1) selectedId = toAdd[0].id;
     closeModal($("#importScrim"));
@@ -1337,7 +1398,7 @@
     const tracked = contacts.filter(c => +c.keepInTouch).length;
     const fading = contacts.filter(c => (c.interactions||[]).length && strength(c) < 15 && !followUp(c)?.due)
       .sort((a,b) => strength(a) - strength(b)).slice(0, 5);
-    const person = c => `<div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>`;
+    const person = c => `${avatar(c)}`;
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Reminders</h2>
       <p>Birthdays, anniversaries and people it's time to get back in touch with.</p></div>
       ${mcp ? `<button class="btn" data-ract="syncAll" id="syncAllBtn">⟳ Sync all from Gmail &amp; Calendar</button>` : ""}</div>
@@ -1601,7 +1662,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
         : esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No phone or email");
       return `<label class="pick ${x.exists ? "dim" : ""}">
         <input type="checkbox" data-pick="${kind}" value="${i}" ${sel.has(i) ? "checked" : ""} ${x.exists ? "disabled" : ""}>
-        <div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        ${avatar(c)}
         <div class="meta"><div class="nm">${esc(fullName(c))}</div><div class="sub">${sub}</div></div>
         ${x.exists ? `<span class="pill ${x.added ? "s-strong" : ""}">${x.added ? "Added ✓" : "Already saved"}</span>` : ""}</label>`;
     }).join("");
@@ -1752,6 +1813,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     if (!list || !sel.size) return;
     const now = new Date().toISOString();
     const toAdd = [...sel].sort((a,b) => a-b).map(i => list[i]).filter(x => x && !x.exists).map(x => normalize({ ...x.c, id: undefined, createdAt: now, updatedAt: now }));
+    await shrinkPhotos(toAdd);
     contacts = contacts.concat(toAdd);
     list.forEach((x, i) => { if (sel.has(i)){ x.exists = true; x.added = true; } });
     sel.clear();
@@ -1809,6 +1871,92 @@ address = one line. Do not invent anything that is not visible on the card. If t
       render();
     }
   });
+
+  // ---------- contact photos & icons ----------
+  function avatar(c, cls = ""){
+    const bg = c.avatarColor || colorFor(c);
+    if (c.photo) return `<div class="avatar ${cls} hasphoto"><img src="${esc(c.photo)}" alt="" loading="lazy"></div>`;
+    if (c.icon) return `<div class="avatar ${cls} icon" style="background:${bg}">${esc(c.icon)}</div>`;
+    return `<div class="avatar ${cls}" style="background:${bg}">${esc(initials(c))}</div>`;
+  }
+  // centre-crop to a small square JPEG so photos stay light to store and sync
+  async function shrinkPhoto(src, size = 192){
+    const img = new Image();
+    const url = typeof src === "string" ? src : URL.createObjectURL(src);
+    img.src = url;
+    try { await img.decode(); } catch(e){ throw new Error("That file isn't an image this browser can read."); }
+    finally { if (typeof src !== "string") setTimeout(() => URL.revokeObjectURL(url), 0); }
+    const s = Math.min(img.naturalWidth, img.naturalHeight);
+    if (!s) throw new Error("That image is empty.");
+    const cv = document.createElement("canvas"); cv.width = cv.height = size;
+    const ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, size, size);
+    ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+    return cv.toDataURL("image/jpeg", 0.82);
+  }
+  async function shrinkPhotos(list, onProgress){
+    let n = 0;
+    for (const c of list){
+      if (!c.photo || c.photo.length < 40000) continue;
+      try { c.photo = await shrinkPhoto(c.photo); } catch(e){ delete c.photo; }
+      if (onProgress && ++n % 10 === 0) onProgress(n);
+    }
+  }
+  const ICONS = ["👤","👩","👨","🧑","👧","👦","👵","👴","👶","👪","❤️","⭐","💼","🏢","🏠","🎓","🩺","⚖️","🔧","🛒","🍽️","💰","📚","🎨","🎵","⚽","✈️","🚗","💻","☎️","🐶","🌍","🕌","⛪","🙏","🎉"];
+  const SWATCHES = ["#2f6fed","#1f9d72","#c2410c","#7c3aed","#db2777","#0891b2","#ca8a04","#4f46e5","#059669","#b45309","#475569","#111827"];
+  let avDraft = null;
+  function openAvatar(c){
+    avDraft = { id: c.id, photo: c.photo || "", icon: c.icon || "", avatarColor: c.avatarColor || "" };
+    $("#avErr").textContent = "";
+    renderAvatarModal();
+    openModal("#avatarScrim");
+  }
+  function draftContact(c){
+    const d = { ...c }; delete d.photo; delete d.icon; delete d.avatarColor;
+    if (avDraft.photo) d.photo = avDraft.photo; if (avDraft.icon) d.icon = avDraft.icon; if (avDraft.avatarColor) d.avatarColor = avDraft.avatarColor;
+    return d;
+  }
+  function renderAvatarModal(){
+    const c = contacts.find(x => x.id === avDraft.id); if (!c) return;
+    $("#avPreview").innerHTML = avatar(draftContact(c));
+    $("#avRemove").hidden = !avDraft.photo;
+    $("#iconGrid").innerHTML = `<button type="button" class="initials ${!avDraft.icon && !avDraft.photo ? "on" : ""}" data-icon="" title="Use initials">${esc(initials(c))}</button>`
+      + ICONS.map(i => `<button type="button" class="${!avDraft.photo && avDraft.icon === i ? "on" : ""}" data-icon="${i}" aria-label="Icon ${i}">${i}</button>`).join("");
+    const cur = (avDraft.avatarColor || colorFor(c)).toLowerCase();
+    $("#swatches").innerHTML = SWATCHES.map(h => `<button type="button" class="${cur === h ? "on" : ""}" data-color="${h}" style="background:${h}" aria-label="Colour ${h}"></button>`).join("");
+  }
+  async function takeFile(f){
+    if (!f) return;
+    if (!/^image\//.test(f.type) && !/\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(f.name)){ $("#avErr").textContent = "Please choose an image file."; return; }
+    $("#avErr").textContent = "Preparing photo…";
+    try { avDraft.photo = await shrinkPhoto(f); avDraft.icon = ""; $("#avErr").textContent = ""; renderAvatarModal(); }
+    catch(e){ $("#avErr").textContent = e.message + (/hei[cf]/i.test(f.name) ? " Try a JPEG or PNG copy of the photo." : ""); }
+  }
+  $("#avUpload").addEventListener("click", () => { $("#avFile").value = ""; $("#avFile").click(); });
+  $("#avCamera").addEventListener("click", () => { $("#avCam").value = ""; $("#avCam").click(); });
+  $("#avFile").addEventListener("change", e => takeFile(e.target.files[0]));
+  $("#avCam").addEventListener("change", e => takeFile(e.target.files[0]));
+  $("#avRemove").addEventListener("click", () => { avDraft.photo = ""; renderAvatarModal(); });
+  $("#iconGrid").addEventListener("click", e => { const b = e.target.closest("[data-icon]"); if (!b) return; avDraft.icon = b.dataset.icon; avDraft.photo = ""; renderAvatarModal(); });
+  $("#swatches").addEventListener("click", e => { const b = e.target.closest("[data-color]"); if (!b) return; avDraft.avatarColor = b.dataset.color; renderAvatarModal(); });
+  ["dragover","drop"].forEach(ev => $("#avatarScrim .body").addEventListener(ev, e => { e.preventDefault(); if (ev === "drop") takeFile(e.dataTransfer.files[0]); }));
+  $("#avSave").addEventListener("click", async () => {
+    const c = contacts.find(x => x.id === avDraft.id); if (!c){ closeModal($("#avatarScrim")); return; }
+    const n = normalize({ ...draftContact(c), updatedAt: new Date().toISOString() });
+    contacts = contacts.map(x => x.id === n.id ? n : x);
+    closeModal($("#avatarScrim"));
+    if (inlineEdit){ const b = $("#inlineForm .avbtn"); if (b) b.innerHTML = avatar(n, "lg") + '<span class="cam" aria-hidden="true">📷</span>'; renderList(); }
+    else render();
+    await persist(n);
+    let stored = true;
+    if (backend === "local"){ try { stored = (localStorage.getItem(LS_KEY) || "").includes(n.photo ? n.photo.slice(-40) : n.id); } catch(e){ stored = false; } }
+    toast(!stored ? "This browser is out of space for photos — open the page on claude.ai to keep them in your account." : n.photo ? "Photo saved" : n.icon ? "Icon saved" : "Avatar updated");
+  });
+  // the avatar button opens the picker (capture phase, so it wins over click-to-edit)
+  $("#main").addEventListener("click", e => {
+    const b = e.target.closest('[data-act="avatar"]'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const c = contacts.find(x => x.id === selectedId); if (c) openAvatar(c);
+  }, true);
 
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));

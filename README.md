@@ -9,6 +9,7 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 - **Import** vCard (.vcf), CSV (Google / Outlook / generic) or JSON — one contact or many, with preview and duplicate skipping
 - **Export** a single contact or all contacts as CSV, JSON or vCard
 - **Bottom navigation** with *Duplicate numbers* and *Duplicate names* views: find matches, choose which contact to keep, and merge
+- **Photo or icon** for each contact: upload or take a photo (auto-cropped and compressed), or pick an emoji icon and background colour; photos are imported from and exported to vCards
 - **Relationship tracking**: log calls, emails, meetings, messages and notes with a date and short note; "how you met" and "introduced by" fields (linked to the introducer's contact)
 - **Reminders** tab: birthday and anniversary alerts for the next 14 days, "keep in touch" nudges (e.g. every 30 days) when you haven't been in contact, and fading relationships
 - **Relationship strength** score (0–100) from how often and how recently you interact
