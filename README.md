@@ -14,6 +14,7 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 - **Conversation notes**: log what was discussed, promises made and the next action (which sets the follow-up)
 - **Weekly review** (10 minutes): add new contacts, update notes, check follow-ups, remove duplicates, reconnect with 2–3 important people — plus a monthly clean-up to archive inactive contacts, check key professional contacts and fill missing details
 - **Archive** and **checked on** dates for contacts; **Outlook CSV** export for Outlook People / Microsoft Contacts
+- **Share a contact** (or several): QR code the other phone scans, the device share menu (Wi-Fi, Bluetooth, AirDrop, Nearby Share) when the page is opened directly in a browser, WhatsApp, Gmail, Outlook, email app, Telegram, or copy as text/vCard — choosing which details to include
 - Search by name, phone, email, company or tag; filter by favorites and tags
 - **Import** vCard (.vcf), CSV (Google / Outlook / generic) or JSON — one contact or many, with preview and duplicate skipping
 - **Export** a single contact or all contacts as CSV, JSON or vCard

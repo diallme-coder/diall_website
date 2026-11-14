@@ -587,6 +587,27 @@
   .cleanup .mini{border-radius:10px;justify-content:space-between;display:flex}
   .cleanup .mini .muted{font-size:12px;margin-left:auto}
   @media (max-width:900px){ .cleanup{grid-template-columns:1fr} }
+
+  /* share */
+  .sharetop{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;margin-bottom:16px}
+  .qrbox{width:200px;display:grid;gap:6px}
+  .qr{background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;line-height:0}
+  .qr svg{width:100%;height:auto;display:block}
+  .qrbox .note{margin:0;font-size:11.5px}
+  .sharefields{display:grid;gap:7px;align-content:start}
+  .sfhead{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .sharefields .keep{font-size:13.5px;color:var(--ink)}
+  .sharegrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .shareopt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);text-decoration:none;cursor:pointer;font:inherit;text-align:left;transition:border-color .15s,background .15s}
+  .shareopt:hover{border-color:var(--line-strong);background:var(--panel-2)}
+  .shareopt svg.i{width:20px;height:20px;color:var(--accent);margin-bottom:4px}
+  .shareopt.wa svg.i{color:#1c9a4b}
+  .shareopt b{font-size:13.5px}
+  .shareopt span{font-size:11.5px;color:var(--muted);line-height:1.3}
+  .sharemsg{font-size:13px;margin-top:10px;color:var(--ink)}
+  .sharemsg:empty{display:none}
+  .sharemsg{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:10px;padding:10px 12px}
+  @media (max-width:560px){ .sharetop{grid-template-columns:1fr;justify-items:center} .sharefields{width:100%} .sharegrid{grid-template-columns:1fr 1fr} .qrbox{width:220px} }
 </style>
 </head>
 <body>
@@ -732,6 +753,14 @@
   </div>
 </div>
 
+<!-- Share modal -->
+<div class="scrim" id="shareScrim">
+  <div class="modal" style="max-width:560px">
+    <header><h3 id="shareTitle">Share contact</h3><button type="button" class="btn ghost" data-close aria-label="Close">✕</button></header>
+    <div class="body" id="shareBody"></div>
+  </div>
+</div>
+
 <!-- Bulk action modal -->
 <div class="scrim" id="bulkScrim">
   <div class="modal" style="max-width:460px">
@@ -767,6 +796,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (() => {
   // ---------- state ----------
@@ -804,7 +834,10 @@
     flag: '<path d="M4 21V4"/><path d="M4 4h12l-2 4 2 4H4"/>',
     archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
     shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/>',
-    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+    wifi: '<path d="M5 12.6a10 10 0 0 1 14 0M8.5 16.1a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 20 0"/><path d="M12 20h.01"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>'
   });
   const ic = n => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n] || ""}</svg>`;
   const fullName = c => [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || c.company || c.email || c.phone || "Unnamed";
@@ -1034,6 +1067,7 @@
         <button class="btn ${c.favorite ? "faved" : ""}" data-act="fav" aria-pressed="${c.favorite}">${ic("star")}${c.favorite ? "Favorite" : "Add to favorites"}</button>
         ${c.phone ? `<a class="btn" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${ic("phone")}Call</a>` : ""}
         ${c.email ? `<a class="btn" href="mailto:${esc(c.email)}">${ic("mail")}Email</a>` : ""}
+        <button class="btn" data-act="share">${ic("share")}Share</button>
         <span class="spacer"></span>
         <button class="btn icon ${c.verifiedAt && daysAgo(c.verifiedAt) < 180 ? "verified" : ""}" data-act="verify" title="${c.verifiedAt ? `Details checked ${agoText(c.verifiedAt)} — mark checked again` : "Mark details as checked today"}" aria-label="Mark details as checked">${ic("shield")}</button>
         <button class="btn icon" data-act="archive" title="${c.archived ? "Unarchive" : "Archive (hide from the list)"}" aria-label="${c.archived ? "Unarchive" : "Archive"}">${ic("archive")}</button>
@@ -2480,6 +2514,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
         <button class="btn sm" data-bulk="tag" ${n ? "" : "disabled"}>${ic("tag")}Tag</button>
         <button class="btn sm" data-bulk="archive" ${n ? "" : "disabled"}>${ic("archive")}${n && list.every(c => c.archived) ? "Unarchive" : "Archive"}</button>
         <button class="btn sm" data-bulk="kit" ${n ? "" : "disabled"}>${ic("bell")}Keep in touch</button>
+        <button class="btn sm" data-bulk="share" ${n ? "" : "disabled"}>${ic("share")}Share</button>
         <button class="btn sm" data-bulk="export" ${n ? "" : "disabled"}>${ic("export")}Export</button>
         <button class="btn sm" data-bulk="merge" ${n >= 2 ? "" : "disabled"} title="Combine the selected contacts into one">${ic("users")}Merge</button>
         <button class="btn sm danger" data-bulk="delete" ${n ? "" : "disabled"}>${ic("trash")}Delete</button>
@@ -2580,6 +2615,9 @@ address = one line. Do not invent anything that is not visible on the card. If t
         updatePicked(c => ({ ...c, archived: val })).then(k => { toast(`${val ? "Archived" : "Unarchived"} ${k} contact${k===1?"":"s"}`); });
         break;
       }
+      case "share":
+        openShare(sorted(list));
+        break;
       case "export":
         openExport(sorted(list), n === 1 ? fullName(list[0]) : "contacts", n === 1);
         break;
@@ -2960,6 +2998,113 @@ address = one line. Do not invent anything that is not visible on the card. If t
     ["Notes", c => [c.notes, c.howMet ? "How we met: " + c.howMet : "", c.nextFollowUp ? `Next follow-up: ${c.nextFollowUp}${c.followUpNote ? " — " + c.followUpNote : ""}` : ""].filter(Boolean).join("\n")]];
   function toOutlook(items){ return [OUTLOOK_COLS.map(c => c[0]).join(","), ...items.map(c => OUTLOOK_COLS.map(([, f]) => csvCell(f(c) || "")).join(","))].join("\r\n"); }
 
+  // ---------- sharing a contact ----------
+  const SHARE_FIELDS = [["phone","Phone",true],["email","Email",true],["work","Job & company",true],["address","Address",false],["website","Website",false],["birthday","Birthday",false],["notes","Notes",false]];
+  let shareList = [], shareOn = null;
+  function shareText(list){
+    return list.map(c => {
+      const L = [fullName(c)];
+      if (shareOn.phone && c.phone) L.push("Phone: " + c.phone);
+      if (shareOn.email && c.email) L.push("Email: " + c.email);
+      if (shareOn.work && (c.jobTitle || c.company)) L.push([c.jobTitle, c.company].filter(Boolean).join(", "));
+      if (shareOn.address && c.address) L.push("Address: " + c.address);
+      if (shareOn.website && c.website) L.push("Web: " + c.website);
+      if (shareOn.birthday && c.birthday) L.push("Birthday: " + fmtDate(c.birthday));
+      if (shareOn.notes && c.notes) L.push("Notes: " + c.notes);
+      return L.join("\n");
+    }).join("\n\n");
+  }
+  function shareVCard(list){
+    return list.map(c => {
+      const L = ["BEGIN:VCARD","VERSION:3.0",`N:${vEsc(c.lastName)};${vEsc(c.firstName)};;;`,`FN:${vEsc(fullName(c))}`];
+      if (shareOn.phone && c.phone) L.push(`TEL;TYPE=CELL:${vEsc(c.phone)}`);
+      if (shareOn.email && c.email) L.push(`EMAIL:${vEsc(c.email)}`);
+      if (shareOn.work && c.company) L.push(`ORG:${vEsc(c.company)}`);
+      if (shareOn.work && c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
+      if (shareOn.address && c.address) L.push(`ADR:;;${vEsc(c.address)};;;;`);
+      if (shareOn.website && c.website) L.push(`URL:${vEsc(c.website)}`);
+      if (shareOn.birthday && c.birthday) L.push(`BDAY:${c.birthday}`);
+      if (shareOn.notes && c.notes) L.push(`NOTE:${vEsc(c.notes)}`);
+      L.push("END:VCARD");
+      return L.join("\r\n");
+    }).join("\r\n");
+  }
+  function qrSVG(text){
+    if (typeof qrcode !== "function") return "";
+    try {
+      if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs["UTF-8"]) qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
+      const q = qrcode(0, "M"); q.addData(text, "Byte"); q.make();
+      const n = q.getModuleCount(), m = 3; let d = "";
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+      return `<svg viewBox="0 0 ${n + 2*m} ${n + 2*m}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#111"/></svg>`;
+    } catch(e){ return ""; }
+  }
+  function openShare(list){
+    shareList = list.slice(0, 200);
+    shareOn = shareOn || Object.fromEntries(SHARE_FIELDS.map(([k,,d]) => [k, d]));
+    $("#shareTitle").textContent = list.length === 1 ? `Share ${fullName(list[0])}` : `Share ${list.length} contacts`;
+    renderShare();
+    openModal("#shareScrim");
+  }
+  function renderShare(){
+    const list = shareList, one = list.length === 1, c = list[0];
+    const text = shareText(list), vcf = shareVCard(list);
+    const enc = encodeURIComponent, subj = one ? `Contact: ${fullName(c)}` : `${list.length} contacts`;
+    const canFiles = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File(["x"], "c.vcf", { type: "text/vcard" })] })); } catch(e){ return false; } })();
+    const qr = one ? qrSVG(vcf) : "";
+    const available = SHARE_FIELDS.filter(([k]) => list.some(x => k === "work" ? (x.jobTitle || x.company) : x[k]));
+    $("#shareBody").innerHTML = `
+      <div class="sharetop">
+        ${one ? `<div class="qrbox">${qr ? `<div class="qr" role="img" aria-label="QR code for ${esc(fullName(c))}">${qr}</div><p class="note">Scan with the other phone's camera to save the contact — works offline, no app or pairing.</p>` : `<p class="note">QR code unavailable here.</p>`}</div>` : ""}
+        <div class="sharefields">
+          <div class="sfhead">Include</div>
+          <label class="keep on"><input type="checkbox" checked disabled> Name</label>
+          ${available.map(([k, label]) => `<label class="keep"><input type="checkbox" data-sf="${k}" ${shareOn[k] ? "checked" : ""}> ${label}</label>`).join("")}
+          ${one ? "" : `<p class="note">${list.length > 1 ? `${list.length} people will be sent as one message.` : ""}</p>`}
+        </div>
+      </div>
+      <div class="sharegrid">
+        <button type="button" class="shareopt" data-share="native">${ic("wifi")}<b>Nearby &amp; apps</b><span>Wi-Fi, Bluetooth, AirDrop, Nearby Share</span></button>
+        <a class="shareopt wa" href="https://wa.me/?text=${enc(text)}" target="_blank" rel="noopener">${ic("message")}<b>WhatsApp</b><span>Send as a message</span></a>
+        <a class="shareopt" href="https://mail.google.com/mail/?view=cm&fs=1&su=${enc(subj)}&body=${enc(text)}" target="_blank" rel="noopener">${ic("mail")}<b>Gmail</b><span>Opens a new email</span></a>
+        <a class="shareopt" href="https://outlook.office.com/mail/deeplink/compose?subject=${enc(subj)}&body=${enc(text)}" target="_blank" rel="noopener">${ic("mail")}<b>Outlook</b><span>Opens a new email</span></a>
+        <a class="shareopt" href="mailto:?subject=${enc(subj)}&body=${enc(text)}">${ic("mail")}<b>Email app</b><span>Your default mail app</span></a>
+        <a class="shareopt" href="https://t.me/share/url?url=${enc(" ")}&text=${enc(text)}" target="_blank" rel="noopener">${ic("message")}<b>Telegram</b><span>Send as a message</span></a>
+        <button type="button" class="shareopt" data-share="copytext">${ic("copy")}<b>Copy text</b><span>Paste into any chat or SMS</span></button>
+        <button type="button" class="shareopt" data-share="copyvcf">${ic("card")}<b>Copy vCard</b><span>For contact apps</span></button>
+      </div>
+      <div class="sharemsg" id="shareMsg" aria-live="polite"></div>
+      <details class="howto"><summary>Preview what will be sent</summary><pre class="out">${esc(text)}</pre></details>`;
+    $("#shareBody").dataset.canfiles = canFiles ? "1" : "";
+  }
+  $("#shareBody").addEventListener("change", e => {
+    const cb = e.target.closest("[data-sf]"); if (!cb) return;
+    shareOn[cb.dataset.sf] = cb.checked; renderShare();
+  });
+  $("#shareBody").addEventListener("click", async e => {
+    const b = e.target.closest("[data-share]"); if (!b) return;
+    const list = shareList, one = list.length === 1, msg = t => { $("#shareMsg").innerHTML = t; };
+    const text = shareText(list), vcf = shareVCard(list);
+    if (b.dataset.share === "copytext" || b.dataset.share === "copyvcf"){
+      const val = b.dataset.share === "copytext" ? text : vcf;
+      try { await navigator.clipboard.writeText(val); toast("Copied — paste it anywhere"); }
+      catch(err){ msg(`Copying is blocked here. Select the text in “Preview what will be sent” and copy it.`); $("#shareBody details").open = true; }
+      return;
+    }
+    // device share sheet: Wi-Fi / Bluetooth / AirDrop / Nearby Share and any installed app
+    const name = (one ? slug(fullName(list[0])) : "contacts") + ".vcf";
+    try {
+      const file = new File([vcf], name, { type: "text/vcard" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: one ? fullName(list[0]) : "Contacts" });
+      else if (navigator.share) await navigator.share({ title: one ? fullName(list[0]) : "Contacts", text });
+      else throw Object.assign(new Error("unsupported"), { name: "NotSupported" });
+      toast("Shared");
+    } catch(err){
+      if (err && err.name === "AbortError") return;
+      msg(`Your device's share menu can't open from inside this page.${one ? " Use the <b>QR code</b> — the other phone just scans it — or" : " Use"} WhatsApp, email or Copy above. To beam it over Bluetooth or Wi-Fi, open this app directly in your phone's browser (for example from your GitHub page) and tap <b>Nearby &amp; apps</b> there.`);
+    }
+  });
+
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
   $("#importBtn").addEventListener("click", openImport);
@@ -3005,6 +3150,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
       case "export1": if (c) openExport([c], fullName(c), true); break;
       case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); render(); await persist(c); } break;
       case "archive": if (c){ await patchContact(c.id, { archived: !c.archived }); toast(c.archived ? `${fullName(c)} is back in your list` : `${fullName(c)} archived — find it under the Archived filter`); } break;
+      case "share": if (c) openShare([c]); break;
       case "verify": if (c){ await patchContact(c.id, { verifiedAt: today() }); toast("Marked as checked today"); } break;
       case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", interactions: [], syncedAt: "", createdAt: now, updatedAt: now }); contacts.push(d); selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
     }
