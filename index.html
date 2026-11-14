@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f6f7f9; --panel:#fff; --ink:#1b1f24; --muted:#6b7380; --line:#e4e7ec;
@@ -497,6 +498,36 @@
   .toast.act{pointer-events:auto;display:flex;align-items:center;gap:14px}
   .toast button{border:0;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer;padding:2px 4px;border-radius:6px;text-decoration:underline;text-underline-offset:3px}
   .toast button:hover{opacity:.8}
+
+  /* country codes */
+  .fl{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-weight:400}
+  .phonefield{display:flex;align-items:stretch;gap:0;width:100%}
+  .phonefield .cc{position:relative;display:flex;align-items:center;gap:4px;padding:0 8px 0 10px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:var(--panel-2);cursor:pointer;white-space:nowrap;font-weight:600;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .phonefield .cc:hover{background:var(--accent-soft)}
+  .phonefield .cc:focus-within{outline:2px solid var(--accent);outline-offset:-1px}
+  .phonefield .chev{width:13px;height:13px;color:var(--muted)}
+  .phonefield .ccsel{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;font-size:16px}
+  .phonefield input{flex:1;min-width:0;border-radius:0 10px 10px 0!important}
+  .card.editing .phonefield .cc{border-radius:8px 0 0 8px}
+  .card.editing .phonefield input{border-radius:0 8px 8px 0!important}
+  .ccflag{display:inline-block;margin-right:6px;font-size:15px;line-height:1;vertical-align:-1px}
+  .item .sub .ccflag{font-size:12px;margin-right:3px}
+  .ccname{color:var(--muted);font-size:12.5px;margin-left:6px}
+  .chip.ccfilter{position:relative;display:inline-flex;align-items:center;padding-right:24px}
+  .chip.ccfilter::after{content:"";position:absolute;right:9px;top:50%;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg)}
+  .chip.ccfilter select{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:16px}
+  .countries{padding:14px 16px}
+  .countries h3{margin:0 0 10px}
+  .ccbars{display:grid;gap:4px}
+  .ccbar{display:grid;grid-template-columns:minmax(150px,240px) 1fr 54px;align-items:center;gap:12px;border:0;background:none;padding:6px 8px;border-radius:8px;cursor:pointer;color:inherit;font:inherit;text-align:left}
+  .ccbar:hover{background:var(--panel-2)}
+  .ccbar .cl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:550}
+  .ccbar .track{height:8px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+  .ccbar .track span{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .ccbar .cn{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
+  .defcc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 8px 2px;font-size:13px;color:var(--muted)}
+  .defcc select{max-width:260px}
+  @media (max-width:560px){ .ccbar{grid-template-columns:1fr 54px} .ccbar .track{grid-column:1/-1;grid-row:2} }
 </style>
 </head>
 <body>
@@ -825,6 +856,7 @@
     const q = query.toLowerCase().trim();
     return sorted(contacts).filter(c => {
       if (filter === "fav" && !c.favorite) return false;
+      if (countryFilter && (countryFilter === "none" ? phoneCountry(c) : phoneCountry(c) !== countryFilter)) return false;
       if (filter.startsWith("tag:") && !tagList(c).includes(filter.slice(4))) return false;
       if (!q) return true;
       const hay = [fullName(c), c.phone, c.email, c.company, c.jobTitle, c.address, c.notes, ...tagList(c)].join(" ").toLowerCase();
@@ -839,6 +871,12 @@
     let h = `<button class="chip ${filter==="all"?"on":""}" data-f="all">All · ${contacts.length}</button>`;
     h += `<button class="chip ${filter==="fav"?"on":""}" data-f="fav">★ Favorites · ${favs}</button>`;
     for (const t of tags) h += `<button class="chip ${filter==="tag:"+t?"on":""}" data-f="tag:${esc(t)}">${esc(t)}</button>`;
+    const cc = {};
+    for (const c of contacts){ if (!c.phone) continue; const iso = phoneCountry(c) || "none"; cc[iso] = (cc[iso] || 0) + 1; }
+    const ccList = Object.entries(cc).sort((a,b) => b[1] - a[1]);
+    if (countryFilter && !cc[countryFilter]) countryFilter = "";
+    if (ccList.length > 1 || countryFilter) h += `<label class="chip ccfilter ${countryFilter ? "on" : ""}" title="Filter by phone country"><span class="fl">${countryFilter ? (countryFilter === "none" ? "🌐" : flagOf(countryFilter)) : "🌍"}</span>${countryFilter && countryFilter !== "none" ? `&nbsp;${esc(CBY[countryFilter].name)}` : "&nbsp;Country"}
+      <select id="countryFilter" aria-label="Filter by country"><option value="">All countries</option>${ccList.map(([iso, n]) => `<option value="${iso}" ${iso===countryFilter?"selected":""}>${iso === "none" ? "🌐 No country code" : `${flagOf(iso)} ${esc(CBY[iso].name)} (+${dialOf(iso)})`} · ${n}</option>`).join("")}</select></label>`;
     $("#filters").innerHTML = h;
     if (filter.startsWith("tag:") && !tags.includes(filter.slice(4))) filter = "all";
   }
@@ -851,10 +889,11 @@
       const g = /[A-Z]/.test(L) ? L : "#";
       if (g !== letter){ letter = g; h += `<div class="group" data-letter="${g}">${g}</div>`; }
       const sub = c.phone || c.email || c.company || "";
+      const subFlag = c.phone ? phoneDisplay(c) + " " : "";
       const on = picked.has(c.id);
       h += `<div class="item ${!selMode && c.id===selectedId?"sel":""} ${on?"picked":""}" data-id="${esc(c.id)}" ${selMode ? `role="checkbox" aria-checked="${on}" tabindex="0"` : ""}>
         ${selMode ? `<span class="cb ${on?"on":""}" aria-hidden="true">${ic("check")}</span>` : ""}${avatar(c)}
-        <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div><div class="sub">${esc(sub)}</div></div></div>`;
+        <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div><div class="sub">${subFlag}${esc(sub)}</div></div></div>`;
     }
     if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
     $("#list").innerHTML = h;
@@ -905,7 +944,7 @@
         <button class="btn icon danger" data-act="delete" title="Delete" aria-label="Delete">${ic("trash")}</button>
       </div>
       <div class="card">
-        ${row("Phone", c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>` : "", "phone")}
+        ${row("Phone", c.phone ? `${phoneDisplay(c)}<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>${(() => { const p = phoneParts(c.phone); return p.iso ? ` <span class="ccname">${esc(CBY[p.iso].name)}${p.intl ? "" : " · assumed"}</span>` : ""; })()}` : "", "phone")}
         ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "", "email")}
         ${row("Company", esc(c.company), "company")}
         ${row("Job title", esc(c.jobTitle), "jobTitle")}
@@ -1158,6 +1197,8 @@
       else el.value = src?.[f] || "";
     }
     openModal("#editScrim");
+    enhancePhone($("#f_phone"));
+    if (prefill && prefill.phone && !c) $("#f_phone").closest(".phonefield").dataset.touched = "1";
     setTimeout(()=>$("#f_firstName").focus(), 30);
   }
   function validateRaw(raw){
@@ -1189,6 +1230,7 @@
     e.preventDefault();
     const raw = {};
     for (const f of FIELDS){ const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    raw.phone = readPhone($("#f_phone"));
     const err = validateRaw(raw);
     if (err){ $("#editErr").textContent = err; return; }
     closeModal($("#editScrim"));
@@ -1214,6 +1256,7 @@
       const el = f.elements[k]; if (!el) continue;
       raw[k] = k === "favorite" ? el.checked : el.value;
     }
+    if (f.elements.phone) raw.phone = readPhone(f.elements.phone);
     return raw;
   }
   function inlineDirty(){
@@ -1263,6 +1306,7 @@
         ${EDIT_ROWS.map(([k,label,type]) => `<div class="row"><label class="k" for="i_${k}">${label}</label><div class="v">${inp(k,label,type, k==="tags" ? tagList(c).join(", ") : c[k])}</div></div>`).join("")}
       </div>
     </form>`;
+    enhancePhone($("#i_phone"));
     const el = $("#i_" + (inlineFocus || "firstName")) || $("#i_firstName");
     inlineFocus = null;
     if (el){ el.focus(); if (el.setSelectionRange && /^(text|tel|search|textarea)$/.test(el.type)) { try { el.setSelectionRange(el.value.length, el.value.length); } catch(e){} } }
@@ -2263,6 +2307,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
           ${recent.map(c => prow(c, esc(c.phone || c.email || c.company || "No details yet"))).join("")}
         </section>
       </div>
+      ${countriesCard()}
     </div>`;
   }
   $("#main").addEventListener("click", e => {
@@ -2495,6 +2540,157 @@ address = one line. Do not invent anything that is not visible on the card. If t
   $("#count").addEventListener("click", e => {
     const b = e.target.closest("[data-go]"); if (!b) return;
     leaveInline(() => { if (selMode) exitSelect(); setView(b.dataset.go); render(); $("#main").scrollTop = 0; });
+  });
+
+  // ---------- country calling codes ----------
+  // [ISO, name, calling code]. NANP members other than US/CA carry their area code after the 1.
+  const COUNTRIES = [
+    ["AF","Afghanistan","93"],["AL","Albania","355"],["DZ","Algeria","213"],["AD","Andorra","376"],["AO","Angola","244"],["AI","Anguilla","1264"],["AG","Antigua & Barbuda","1268"],["AR","Argentina","54"],["AM","Armenia","374"],["AW","Aruba","297"],["AU","Australia","61"],["AT","Austria","43"],["AZ","Azerbaijan","994"],
+    ["BS","Bahamas","1242"],["BH","Bahrain","973"],["BD","Bangladesh","880"],["BB","Barbados","1246"],["BY","Belarus","375"],["BE","Belgium","32"],["BZ","Belize","501"],["BJ","Benin","229"],["BM","Bermuda","1441"],["BT","Bhutan","975"],["BO","Bolivia","591"],["BA","Bosnia & Herzegovina","387"],["BW","Botswana","267"],["BR","Brazil","55"],["VG","British Virgin Islands","1284"],["BN","Brunei","673"],["BG","Bulgaria","359"],["BF","Burkina Faso","226"],["BI","Burundi","257"],
+    ["KH","Cambodia","855"],["CM","Cameroon","237"],["CA","Canada","1"],["CV","Cape Verde","238"],["KY","Cayman Islands","1345"],["CF","Central African Republic","236"],["TD","Chad","235"],["CL","Chile","56"],["CN","China","86"],["CO","Colombia","57"],["KM","Comoros","269"],["CG","Congo","242"],["CD","Congo (DRC)","243"],["CK","Cook Islands","682"],["CR","Costa Rica","506"],["CI","Côte d’Ivoire","225"],["HR","Croatia","385"],["CU","Cuba","53"],["CW","Curaçao","599"],["CY","Cyprus","357"],["CZ","Czechia","420"],
+    ["DK","Denmark","45"],["DJ","Djibouti","253"],["DM","Dominica","1767"],["DO","Dominican Republic","1809"],["EC","Ecuador","593"],["EG","Egypt","20"],["SV","El Salvador","503"],["GQ","Equatorial Guinea","240"],["ER","Eritrea","291"],["EE","Estonia","372"],["SZ","Eswatini","268"],["ET","Ethiopia","251"],
+    ["FK","Falkland Islands","500"],["FO","Faroe Islands","298"],["FJ","Fiji","679"],["FI","Finland","358"],["FR","France","33"],["GF","French Guiana","594"],["PF","French Polynesia","689"],["GA","Gabon","241"],["GM","Gambia","220"],["GE","Georgia","995"],["DE","Germany","49"],["GH","Ghana","233"],["GI","Gibraltar","350"],["GR","Greece","30"],["GL","Greenland","299"],["GD","Grenada","1473"],["GP","Guadeloupe","590"],["GU","Guam","1671"],["GT","Guatemala","502"],["GN","Guinea","224"],["GW","Guinea-Bissau","245"],["GY","Guyana","592"],
+    ["HT","Haiti","509"],["HN","Honduras","504"],["HK","Hong Kong","852"],["HU","Hungary","36"],["IS","Iceland","354"],["IN","India","91"],["ID","Indonesia","62"],["IR","Iran","98"],["IQ","Iraq","964"],["IE","Ireland","353"],["IL","Israel","972"],["IT","Italy","39"],["JM","Jamaica","1876"],["JP","Japan","81"],["JO","Jordan","962"],
+    ["KZ","Kazakhstan","7"],["KE","Kenya","254"],["KI","Kiribati","686"],["XK","Kosovo","383"],["KW","Kuwait","965"],["KG","Kyrgyzstan","996"],["LA","Laos","856"],["LV","Latvia","371"],["LB","Lebanon","961"],["LS","Lesotho","266"],["LR","Liberia","231"],["LY","Libya","218"],["LI","Liechtenstein","423"],["LT","Lithuania","370"],["LU","Luxembourg","352"],
+    ["MO","Macau","853"],["MG","Madagascar","261"],["MW","Malawi","265"],["MY","Malaysia","60"],["MV","Maldives","960"],["ML","Mali","223"],["MT","Malta","356"],["MH","Marshall Islands","692"],["MQ","Martinique","596"],["MR","Mauritania","222"],["MU","Mauritius","230"],["YT","Mayotte","262"],["MX","Mexico","52"],["FM","Micronesia","691"],["MD","Moldova","373"],["MC","Monaco","377"],["MN","Mongolia","976"],["ME","Montenegro","382"],["MS","Montserrat","1664"],["MA","Morocco","212"],["MZ","Mozambique","258"],["MM","Myanmar","95"],
+    ["NA","Namibia","264"],["NR","Nauru","674"],["NP","Nepal","977"],["NL","Netherlands","31"],["NC","New Caledonia","687"],["NZ","New Zealand","64"],["NI","Nicaragua","505"],["NE","Niger","227"],["NG","Nigeria","234"],["NU","Niue","683"],["KP","North Korea","850"],["MK","North Macedonia","389"],["MP","Northern Mariana Islands","1670"],["NO","Norway","47"],["OM","Oman","968"],
+    ["PK","Pakistan","92"],["PW","Palau","680"],["PS","Palestine","970"],["PA","Panama","507"],["PG","Papua New Guinea","675"],["PY","Paraguay","595"],["PE","Peru","51"],["PH","Philippines","63"],["PL","Poland","48"],["PT","Portugal","351"],["PR","Puerto Rico","1787"],["QA","Qatar","974"],["RE","Réunion","262"],["RO","Romania","40"],["RU","Russia","7"],["RW","Rwanda","250"],
+    ["KN","St Kitts & Nevis","1869"],["LC","St Lucia","1758"],["PM","St Pierre & Miquelon","508"],["VC","St Vincent & Grenadines","1784"],["WS","Samoa","685"],["SM","San Marino","378"],["ST","São Tomé & Príncipe","239"],["SA","Saudi Arabia","966"],["SN","Senegal","221"],["RS","Serbia","381"],["SC","Seychelles","248"],["SL","Sierra Leone","232"],["SG","Singapore","65"],["SX","Sint Maarten","1721"],["SK","Slovakia","421"],["SI","Slovenia","386"],["SB","Solomon Islands","677"],["SO","Somalia","252"],["ZA","South Africa","27"],["KR","South Korea","82"],["SS","South Sudan","211"],["ES","Spain","34"],["LK","Sri Lanka","94"],["SD","Sudan","249"],["SR","Suriname","597"],["SE","Sweden","46"],["CH","Switzerland","41"],["SY","Syria","963"],
+    ["TW","Taiwan","886"],["TJ","Tajikistan","992"],["TZ","Tanzania","255"],["TH","Thailand","66"],["TL","Timor-Leste","670"],["TG","Togo","228"],["TO","Tonga","676"],["TT","Trinidad & Tobago","1868"],["TN","Tunisia","216"],["TR","Türkiye","90"],["TM","Turkmenistan","993"],["TC","Turks & Caicos","1649"],["TV","Tuvalu","688"],
+    ["UG","Uganda","256"],["UA","Ukraine","380"],["AE","United Arab Emirates","971"],["GB","United Kingdom","44"],["US","United States","1"],["VI","US Virgin Islands","1340"],["UY","Uruguay","598"],["UZ","Uzbekistan","998"],["VU","Vanuatu","678"],["VE","Venezuela","58"],["VN","Vietnam","84"],["WF","Wallis & Futuna","681"],["YE","Yemen","967"],["ZM","Zambia","260"],["ZW","Zimbabwe","263"]
+  ];
+  const CBY = Object.fromEntries(COUNTRIES.map(c => [c[0], { iso: c[0], name: c[1], code: c[2] }]));
+  const dialOf = iso => (CBY[iso]?.code || "").replace(/^1\d{3}$/, "1");      // what you type after +
+  const flagOf = iso => iso ? String.fromCodePoint(...[...iso].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65)) : "🌐";
+  const NANP = {}; for (const [iso,,code] of COUNTRIES) if (/^1\d{3}$/.test(code)) NANP[code.slice(1)] = iso;
+  Object.assign(NANP, { "658":"JM", "939":"PR", "829":"DO", "849":"DO" });
+  const CA_AREAS = new Set("204 226 236 249 250 263 289 306 343 354 365 367 368 382 387 403 416 418 428 431 437 438 450 468 474 506 514 519 548 579 581 584 587 604 613 639 647 672 683 705 709 742 753 778 780 782 807 819 825 867 873 879 902 905 942".split(" "));
+  const CODE_TO_ISO = {};   // first listed wins for shared codes (44 → GB, 262 → RE, 7 → RU ...)
+  for (const iso of ["GB","IT","NO","AU","FI","MA","RE","GP","CW","RU","US"]) CODE_TO_ISO[CBY[iso].code] = iso;
+  for (const [iso,,code] of COUNTRIES) if (!/^1\d{3}$/.test(code) && !(code in CODE_TO_ISO)) CODE_TO_ISO[code] = iso;
+  function countryFromDigits(d){
+    if (!d) return "";
+    if (d[0] === "1"){ const a = d.slice(1, 4); return NANP[a] || (CA_AREAS.has(a) ? "CA" : "US"); }
+    if (d[0] === "7") return d[1] === "6" || d[1] === "7" ? "KZ" : "RU";
+    for (let n = 4; n >= 1; n--){ const iso = CODE_TO_ISO[d.slice(0, n)]; if (iso) return iso; }
+    return "";
+  }
+  // split a stored number into its country and the part after the code
+  const ppCache = new Map();
+  function phoneParts(num, fallback = defaultCountry()){
+    const s = String(num || "").trim(), key = s + "|" + fallback;
+    if (ppCache.has(key)) return ppCache.get(key);
+    let out;
+    const digits = s.replace(/\D/g, "");
+    if (!s) out = { iso: fallback, rest: "", intl: false };
+    else if (/[*#]/.test(s) || digits.length < 6) out = { iso: "", rest: s, intl: false };
+    else {
+      const intlText = s.startsWith("+") ? s.slice(1) : s.startsWith("00") ? s.slice(2) : null;
+      if (intlText === null) out = { iso: fallback, rest: s, intl: false };
+      else {
+        const iso = countryFromDigits(intlText.replace(/\D/g, ""));
+        if (!iso) out = { iso: "", rest: s, intl: true };
+        else {
+          let need = dialOf(iso).length, i = 0;
+          while (i < intlText.length && need > 0){ if (/\d/.test(intlText[i])) need--; i++; }
+          out = { iso, rest: intlText.slice(i).replace(/^[\s.\-)]+/, "").replace(/^\(([^)]*)\)/, "($1)").trim(), intl: true };
+        }
+      }
+    }
+    if (ppCache.size > 20000) ppCache.clear();
+    ppCache.set(key, out);
+    return out;
+  }
+  function combinePhone(iso, rest){
+    rest = String(rest || "").trim();
+    if (!rest || !iso || rest.startsWith("+") || /[*#]/.test(rest)) return rest.startsWith("00") ? "+" + rest.slice(2) : rest;
+    if (rest.startsWith("00")) return "+" + rest.slice(2);
+    if (iso !== "IT") rest = rest.replace(/^\(0\)\s*/, "").replace(/^0(?=\d)/, "");
+    return `+${dialOf(iso)} ${rest}`;
+  }
+  const phoneCountry = c => c.phone ? phoneParts(c.phone).iso : "";
+  let cachedDefault = null;
+  function defaultCountry(){
+    if (cachedDefault) return cachedDefault;
+    try { const v = localStorage.getItem("cm.country"); if (v && CBY[v]) return (cachedDefault = v); } catch(e){}
+    const counts = {};
+    for (const c of contacts){ const s = String(c.phone || "").trim(); if (s.startsWith("+")){ const iso = countryFromDigits(s.replace(/\D/g, "")); if (iso) counts[iso] = (counts[iso] || 0) + 1; } }
+    const top = Object.entries(counts).sort((a,b) => b[1] - a[1])[0];
+    const region = (navigator.language || "").split("-")[1];
+    const guess = top ? top[0] : (CBY[region] ? region : "US");
+    if (contacts.length) cachedDefault = guess;
+    return guess;
+  }
+  function setDefaultCountry(iso){ try { localStorage.setItem("cm.country", iso); } catch(e){} cachedDefault = iso; ppCache.clear(); render(); }
+  const countryLabel = iso => iso ? `${flagOf(iso)} ${CBY[iso].name}` : "No country code";
+  function countryOptions(sel){
+    const sortedC = [...COUNTRIES].sort((a,b) => a[1].localeCompare(b[1]));
+    return `<option value="">🌐 No country code</option>` + sortedC.map(([iso, name]) => `<option value="${iso}" ${iso===sel?"selected":""}>${flagOf(iso)} ${esc(name)} +${dialOf(iso)}</option>`).join("");
+  }
+  // turn a phone <input> into [flag +code ▾][number]
+  function enhancePhone(input){
+    if (!input) return;
+    let wrap = input.closest(".phonefield");
+    if (!wrap){
+      wrap = document.createElement("div"); wrap.className = "phonefield";
+      input.parentNode.insertBefore(wrap, input);
+      wrap.innerHTML = `<label class="cc" title="Country code"><span class="ccshow"></span><svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><select class="ccsel" aria-label="Country code">${countryOptions()}</select></label>`;
+      wrap.appendChild(input);
+      const sel = wrap.querySelector("select");
+      sel.addEventListener("change", () => { wrap.dataset.touched = "1"; showCC(wrap); });
+      input.addEventListener("input", () => { wrap.dataset.touched = "1"; });
+      input.addEventListener("blur", () => {           // a pasted +224… / 00224… picks the country itself
+        const v = input.value.trim();
+        if (v.startsWith("+") || v.startsWith("00")){ const p = phoneParts(v, sel.value); if (p.iso){ sel.value = p.iso; input.value = p.rest; showCC(wrap); } }
+      });
+    }
+    input.dataset.orig = input.value;
+    delete wrap.dataset.touched;
+    const p = phoneParts(input.value);
+    wrap.querySelector("select").value = p.iso;
+    input.value = p.rest;
+    input.placeholder = p.iso ? "Number" : "Number with + and country code";
+    showCC(wrap);
+  }
+  function showCC(wrap){
+    const iso = wrap.querySelector("select").value;
+    wrap.querySelector(".ccshow").innerHTML = iso ? `<span class="fl">${flagOf(iso)}</span> +${dialOf(iso)}` : `<span class="fl">🌐</span>`;
+    wrap.querySelector(".cc").title = iso ? `${CBY[iso].name} (+${dialOf(iso)})` : "No country code";
+  }
+  function readPhone(input){
+    const wrap = input && input.closest(".phonefield");
+    if (!wrap) return input ? input.value : "";
+    if (!wrap.dataset.touched) return input.dataset.orig || "";      // unchanged: keep exactly what was stored
+    return combinePhone(wrap.querySelector("select").value, input.value);
+  }
+  function phoneDisplay(c){
+    const p = phoneParts(c.phone);
+    const assumed = p.iso && !p.intl;
+    return `<span class="ccflag fl" title="${p.iso ? esc(CBY[p.iso].name) + (assumed ? " (no code saved — assumed)" : "") : "No country code"}">${p.iso ? flagOf(p.iso) : "🌐"}</span>`;
+  }
+  let countryFilter = "";
+
+  function countriesCard(){
+    const cc = {};
+    for (const c of contacts){ if (!c.phone) continue; const iso = phoneCountry(c) || "none"; cc[iso] = (cc[iso] || 0) + 1; }
+    const list = Object.entries(cc).sort((a,b) => b[1] - a[1]);
+    const total = list.reduce((s, x) => s + x[1], 0) || 1;
+    const def = defaultCountry();
+    return `<section class="ovcard countries"><h3>${ic("globe")}Phone numbers by country</h3>
+      <div class="ccbars">${list.slice(0, 8).map(([iso, n]) => `<button type="button" class="ccbar" data-ccf="${iso}"><span class="cl">${iso === "none" ? `<span class="fl">🌐</span> No code / short` : `<span class="fl">${flagOf(iso)}</span> ${esc(CBY[iso].name)} <span class="muted">+${dialOf(iso)}</span>`}</span><span class="track"><span style="width:${Math.max(2, n / total * 100)}%"></span></span><span class="cn">${n.toLocaleString()}</span></button>`).join("") || `<p class="muted small">No phone numbers yet.</p>`}</div>
+      <label class="defcc">Numbers saved without a country code are from
+        <select id="defaultCountry">${countryOptions(def).replace('<option value="">🌐 No country code</option>', "")}</select></label>
+    </section>`;
+  }
+  document.addEventListener("change", e => {
+    if (e.target.id === "countryFilter"){ countryFilter = e.target.value; renderFilters(); renderList(); }
+    if (e.target.id === "defaultCountry") setDefaultCountry(e.target.value);
+  });
+  $("#main").addEventListener("click", e => {
+    const b = e.target.closest("[data-ccf]"); if (!b) return;
+    countryFilter = b.dataset.ccf; renderFilters(); renderList();
+    if (matchMedia("(max-width:760px)").matches) $(".list").scrollTop = 0;
+    toast(`Showing ${b.dataset.ccf === "none" ? "numbers without a country code" : CBY[b.dataset.ccf].name + " numbers"}`);
   });
 
   // ---------- events ----------
