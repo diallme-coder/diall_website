@@ -465,6 +465,29 @@
     header.top h1{font-size:23px}
     .btn.icon{width:34px}
   }
+
+  /* multiple selection */
+  .selbar{display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:12.5px;min-height:20px}
+  .selbar:empty{display:none}
+  .linkbtn{display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:2px 4px;margin-left:-4px;color:var(--accent);font:inherit;font-weight:650;cursor:pointer;border-radius:6px}
+  .linkbtn:hover{background:var(--accent-soft)}
+  .linkbtn svg.i{width:14px;height:14px}
+  .hintsm{color:var(--muted);font-size:11.5px}
+  .cb{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line-strong);background:var(--panel);display:grid;place-items:center;flex:none;color:transparent;transition:all .12s}
+  .cb svg.i{width:13px;height:13px;stroke-width:3}
+  .cb.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .selecting .item{user-select:none}
+  .item.picked{background:var(--accent-soft)}
+  .item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .bulkbar{border-top:1px solid var(--line);background:var(--panel);padding:10px 12px 12px;display:grid;gap:8px;box-shadow:0 -6px 18px rgba(20,22,27,.06)}
+  .bulkhead{font-size:13px;color:var(--muted)} .bulkhead b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .bulkacts{display:flex;flex-wrap:wrap;gap:6px}
+  .selecting .count{display:none}
+  .mergelist{display:grid;gap:6px;max-height:320px;overflow:auto}
+  .mergelist .pick{border:1px solid var(--line);border-radius:10px}
+  .mergelist .pick:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+  .mergelist .meta{display:flex;flex-direction:column}
+  @media (hover:none){ .hintsm{display:none} }
 </style>
 </head>
 <body>
@@ -482,8 +505,10 @@
   <aside>
     <div class="searchbar"><svg class="i sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><label for="search" class="sr">Search contacts</label><input id="search" type="search" placeholder="Search name, phone, email, company, tag…" autocomplete="off"></div>
     <div class="filters" id="filters"></div>
+    <div class="selbar" id="selbar"></div>
     <div class="listwrap"><div class="list" id="list"></div><nav class="az" id="az" aria-label="Jump to letter"></nav></div>
     <div class="count" id="count"></div>
+    <div class="bulkbar" id="bulkbar" hidden></div>
   </aside>
 
   <main id="main"></main>
@@ -601,6 +626,15 @@
       <input type="file" id="avCam" accept="image/*" capture="user" hidden>
     </div>
     <footer><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" id="avSave">Save</button></footer>
+  </div>
+</div>
+
+<!-- Bulk action modal -->
+<div class="scrim" id="bulkScrim">
+  <div class="modal" style="max-width:460px">
+    <header><h3 id="bulkTitle">Apply to selected</h3><button type="button" class="btn ghost" data-close aria-label="Close">✕</button></header>
+    <div class="body" id="bulkBody"></div>
+    <footer><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" id="bulkOk">Apply</button></footer>
   </div>
 </div>
 
@@ -792,14 +826,16 @@
       const g = /[A-Z]/.test(L) ? L : "#";
       if (g !== letter){ letter = g; h += `<div class="group" data-letter="${g}">${g}</div>`; }
       const sub = c.phone || c.email || c.company || "";
-      h += `<div class="item ${c.id===selectedId?"sel":""}" data-id="${esc(c.id)}">
-        ${avatar(c)}
+      const on = picked.has(c.id);
+      h += `<div class="item ${!selMode && c.id===selectedId?"sel":""} ${on?"picked":""}" data-id="${esc(c.id)}" ${selMode ? `role="checkbox" aria-checked="${on}" tabindex="0"` : ""}>
+        ${selMode ? `<span class="cb ${on?"on":""}" aria-hidden="true">${ic("check")}</span>` : ""}${avatar(c)}
         <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div><div class="sub">${esc(sub)}</div></div></div>`;
     }
     if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
     $("#list").innerHTML = h;
     const present = new Set([...$("#list").querySelectorAll(".group")].map(x => x.dataset.letter));
     $("#az").innerHTML = items.length > 12 ? [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ#"].map(L => `<button type="button" data-az="${L}" ${present.has(L) ? "" : "disabled"} aria-label="Jump to ${L === "#" ? "other" : L}">${L}</button>`).join("") : "";
+    renderSelBar(items);
     $("#count").textContent = items.length === contacts.length ? `${contacts.length} contact${contacts.length===1?"":"s"}` : `${items.length} of ${contacts.length} shown`;
   }
 
@@ -1077,6 +1113,7 @@
     if (e.key !== "Escape") return;
     const open = document.querySelectorAll(".scrim.open");
     if (open.length) open.forEach(closeModal);
+    else if (selMode){ e.preventDefault(); exitSelect(); }
     else if (inlineEdit){ e.preventDefault(); leaveInline(renderMain); }
   });
 
@@ -2214,6 +2251,154 @@ address = one line. Do not invent anything that is not visible on the card. If t
     if (g) $("#list").scrollTo({ top: g.offsetTop - $("#list").offsetTop, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   });
 
+  // ---------- multiple selection ----------
+  let selMode = false, lastPicked = null, longPressed = false;
+  const picked = new Set();
+  function enterSelect(initial = []){
+    selMode = true; picked.clear(); initial.filter(Boolean).forEach(id => picked.add(id)); lastPicked = initial[0] || null;
+    $("#app").classList.add("selecting"); renderList(); renderBulk();
+  }
+  function exitSelect(){
+    selMode = false; picked.clear(); lastPicked = null;
+    $("#app").classList.remove("selecting"); renderList(); renderBulk();
+  }
+  function togglePick(id, range){
+    const vis = visible().map(c => c.id);
+    if (range && lastPicked && vis.includes(lastPicked)){
+      const [a, b] = [vis.indexOf(lastPicked), vis.indexOf(id)].sort((x,y) => x-y);
+      vis.slice(a, b + 1).forEach(x => picked.add(x));
+    } else picked.has(id) ? picked.delete(id) : picked.add(id);
+    lastPicked = id;
+    renderList(); renderBulk();
+  }
+  function renderSelBar(items){
+    const el = $("#selbar"); if (!el) return;
+    if (!items.length){ el.innerHTML = ""; return; }
+    if (!selMode){ el.innerHTML = `<button type="button" class="linkbtn" data-sel="start">${ic("check")}Select</button><span class="hintsm">or Ctrl/⌘-click a contact</span>`; return; }
+    const visIds = items.map(c => c.id), allOn = visIds.every(id => picked.has(id));
+    el.innerHTML = `<button type="button" class="linkbtn" data-sel="${allOn ? "none" : "all"}">${allOn ? "Clear selection" : `Select all ${items.length < contacts.length ? "shown " : ""}(${items.length.toLocaleString()})`}</button><span class="spacer"></span><button type="button" class="linkbtn" data-sel="done">Done</button>`;
+  }
+  function pickedContacts(){ return contacts.filter(c => picked.has(c.id)); }
+  function renderBulk(){
+    const bar = $("#bulkbar");
+    if (!selMode){ bar.hidden = true; bar.innerHTML = ""; return; }
+    const n = picked.size, list = pickedContacts(), allFav = n && list.every(c => c.favorite);
+    bar.hidden = false;
+    bar.innerHTML = `<div class="bulkhead"><b>${n.toLocaleString()}</b> selected</div>
+      <div class="bulkacts">
+        <button class="btn sm" data-bulk="fav" ${n ? "" : "disabled"}>${ic("star")}${allFav ? "Unfavorite" : "Favorite"}</button>
+        <button class="btn sm" data-bulk="tag" ${n ? "" : "disabled"}>${ic("tag")}Tag</button>
+        <button class="btn sm" data-bulk="kit" ${n ? "" : "disabled"}>${ic("bell")}Keep in touch</button>
+        <button class="btn sm" data-bulk="export" ${n ? "" : "disabled"}>${ic("export")}Export</button>
+        <button class="btn sm" data-bulk="merge" ${n >= 2 ? "" : "disabled"} title="Combine the selected contacts into one">${ic("users")}Merge</button>
+        <button class="btn sm danger" data-bulk="delete" ${n ? "" : "disabled"}>${ic("trash")}Delete</button>
+      </div>`;
+  }
+  async function saveMany(list){ for (const c of list) await persist(c); }
+  function updatePicked(fn){
+    const now = new Date().toISOString(), changed = [];
+    contacts = contacts.map(c => { if (!picked.has(c.id)) return c; const n = normalize({ ...fn({ ...c }), updatedAt: now }); changed.push(n); return n; });
+    render(); renderBulk();
+    return saveMany(changed).then(() => changed.length);
+  }
+  function openBulk(title, bodyHTML, okLabel, onOk){
+    $("#bulkTitle").textContent = title; $("#bulkBody").innerHTML = bodyHTML; $("#bulkOk").textContent = okLabel;
+    openModal("#bulkScrim");
+    $("#bulkOk").onclick = async () => { if ((await onOk()) !== false) closeModal($("#bulkScrim")); };
+    setTimeout(() => $("#bulkBody input, #bulkBody select")?.focus(), 30);
+  }
+  $("#selbar").addEventListener("click", e => {
+    const b = e.target.closest("[data-sel]"); if (!b) return;
+    const a = b.dataset.sel;
+    if (a === "start") leaveInline(() => enterSelect(selectedId ? [selectedId] : []));
+    else if (a === "done") exitSelect();
+    else if (a === "all"){ visible().forEach(c => picked.add(c.id)); renderList(); renderBulk(); }
+    else if (a === "none"){ visible().forEach(c => picked.delete(c.id)); renderList(); renderBulk(); }
+  });
+  $("#list").addEventListener("keydown", e => {
+    if (!selMode || (e.key !== " " && e.key !== "Enter")) return;
+    const it = e.target.closest(".item"); if (!it) return;
+    e.preventDefault(); togglePick(it.dataset.id, e.shiftKey);
+    $(`#list .item[data-id="${CSS.escape(it.dataset.id)}"]`)?.focus();
+  });
+  // long-press on touch screens starts selecting
+  let lpTimer = null;
+  $("#list").addEventListener("pointerdown", e => {
+    if (e.pointerType !== "touch") return;
+    const it = e.target.closest(".item"); if (!it) return;
+    lpTimer = setTimeout(() => { longPressed = true; if (navigator.vibrate) try { navigator.vibrate(15); } catch(_){} if (!selMode) enterSelect([it.dataset.id]); else togglePick(it.dataset.id); }, 480);
+  });
+  ["pointerup","pointercancel","pointermove"].forEach(ev => $("#list").addEventListener(ev, e => { if (ev === "pointermove" && Math.abs(e.movementY) < 4 && Math.abs(e.movementX) < 4) return; clearTimeout(lpTimer); }));
+  $("#list").addEventListener("contextmenu", e => { if (e.target.closest(".item") && longPressed) e.preventDefault(); });
+
+  $("#bulkbar").addEventListener("click", e => {
+    const b = e.target.closest("[data-bulk]"); if (!b || b.disabled) return;
+    const list = pickedContacts(), n = list.length;
+    const who = n === 1 ? esc(fullName(list[0])) : `${n.toLocaleString()} contacts`;
+    switch (b.dataset.bulk){
+      case "fav": {
+        const val = !list.every(c => c.favorite);
+        updatePicked(c => ({ ...c, favorite: val })).then(k => toast(`${val ? "Added" : "Removed"} ${k} ${val ? "to" : "from"} favorites`));
+        break;
+      }
+      case "tag": {
+        const tags = [...new Set(contacts.flatMap(tagList))].sort((a,b) => a.localeCompare(b));
+        openBulk(`Tag ${n === 1 ? "1 contact" : n.toLocaleString() + " contacts"}`,
+          `<div class="field"><label for="bulkTag">Tag</label><input id="bulkTag" list="bulkTags" placeholder="e.g. family, work, conference-2026" autocomplete="off"></div>
+           <datalist id="bulkTags">${tags.map(t => `<option value="${esc(t)}">`).join("")}</datalist>
+           <div class="field"><label for="bulkTagMode">Action</label><select id="bulkTagMode"><option value="add">Add this tag</option><option value="remove">Remove this tag</option></select></div>
+           <div class="err" id="bulkErr"></div>`,
+          "Apply", async () => {
+            const t = $("#bulkTag").value.trim().replace(/,/g, " ");
+            if (!t){ $("#bulkErr").textContent = "Type a tag name."; return false; }
+            const add = $("#bulkTagMode").value === "add";
+            const k = await updatePicked(c => ({ ...c, tags: add ? [...new Set([...tagList(c), t])] : tagList(c).filter(x => x.toLowerCase() !== t.toLowerCase()) }));
+            toast(`${add ? "Tagged" : "Untagged"} ${k} contact${k===1?"":"s"} “${t}”`);
+          });
+        break;
+      }
+      case "kit":
+        openBulk(`Keep in touch with ${n === 1 ? "1 contact" : n.toLocaleString() + " contacts"}`,
+          `<div class="field"><label for="bulkKit">Remind me</label><select id="bulkKit">${KIT.map(([v,l]) => `<option value="${v}" ${v==="30"?"selected":""}>${l}</option>`).join("")}</select></div>
+           <p class="note">You'll see them on the Reminders tab when it's been longer than this since you were last in touch.</p>`,
+          "Apply", async () => {
+            const v = $("#bulkKit").value;
+            const k = await updatePicked(c => ({ ...c, keepInTouch: v }));
+            toast(v ? `Reminder set for ${k} contact${k===1?"":"s"}: ${kitLabel(v).toLowerCase()}` : `Reminders turned off for ${k} contact${k===1?"":"s"}`);
+          });
+        break;
+      case "export":
+        openExport(sorted(list), n === 1 ? fullName(list[0]) : "contacts", n === 1);
+        break;
+      case "merge": {
+        const ordered = [...list].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+        openBulk(`Merge ${n} contacts into one`,
+          `<p style="margin:0 0 10px">Choose the contact to keep. The others' details, tags, notes, activity and photo fill in what it's missing, then they're deleted. This can't be undone.</p>
+           <div class="mergelist">${ordered.map((c, i) => `<label class="pick"><input type="radio" name="mergeKeep" value="${esc(c.id)}" ${i===0?"checked":""}>${avatar(c)}<span class="meta"><span class="nm">${esc(fullName(c))}</span><span class="sub">${esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No details")}</span></span></label>`).join("")}</div>`,
+          "Merge", async () => {
+            const keepId = $('#bulkBody input[name="mergeKeep"]:checked').value;
+            const removeIds = list.map(c => c.id).filter(id => id !== keepId);
+            exitSelect();
+            await runMerges([{ keepId, removeIds }]);
+            selectedId = keepId; setView("contacts"); render();
+          });
+        break;
+      }
+      case "delete":
+        askConfirm(`Delete ${n === 1 ? "this contact" : n.toLocaleString() + " contacts"}?`,
+          `<b>${who}</b> will be permanently removed${n > 1 ? `, including ${list.slice(0,3).map(c => esc(fullName(c))).join(", ")}${n > 3 ? ` and ${n-3} more` : ""}` : ""}. This can't be undone.`,
+          "Delete", async () => {
+            const ids = new Set(list.map(c => c.id));
+            contacts = contacts.filter(c => !ids.has(c.id));
+            if (ids.has(selectedId)) selectedId = null;
+            exitSelect(); render();
+            for (const id of ids) await removeStored(id);
+            toast(`Deleted ${ids.size} contact${ids.size===1?"":"s"}`);
+          });
+        break;
+    }
+  });
+
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
   $("#importBtn").addEventListener("click", openImport);
@@ -2225,7 +2410,15 @@ address = one line. Do not invent anything that is not visible on the card. If t
   $("#search").addEventListener("input", e => { query = e.target.value; renderList(); });
   $("#filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b){ filter = b.dataset.f; renderFilters(); renderList(); } });
   $("#list").addEventListener("click", e => {
-    const it = e.target.closest(".item"); if (!it || it.dataset.id === selectedId) return;
+    const it = e.target.closest(".item"); if (!it) return;
+    if (longPressed){ longPressed = false; return; }
+    if (selMode || e.metaKey || e.ctrlKey || e.shiftKey){
+      e.preventDefault();
+      if (!selMode) enterSelect(selectedId && !e.shiftKey ? [selectedId] : []);
+      togglePick(it.dataset.id, e.shiftKey);
+      return;
+    }
+    if (it.dataset.id === selectedId) return;
     leaveInline(() => { selectedId = it.dataset.id; renderList(); renderMain(); $("#main").scrollTop = 0; });
   });
   $("#main").addEventListener("change", e => {

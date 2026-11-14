@@ -5,6 +5,7 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 ## Features
 - Add, view, favorite, duplicate and delete contacts
 - **Edit in place**: select a contact and click Edit or any field to update it right in the detail view (Enter to save, Esc to cancel, warns before discarding unsaved changes)
+- **Multiple selection**: tick several contacts (Select, Ctrl/⌘-click, Shift-click for a range, or long-press on touch) to favorite, tag, set keep-in-touch reminders, export, merge or delete them in one go
 - Search by name, phone, email, company or tag; filter by favorites and tags
 - **Import** vCard (.vcf), CSV (Google / Outlook / generic) or JSON — one contact or many, with preview and duplicate skipping
 - **Export** a single contact or all contacts as CSV, JSON or vCard
