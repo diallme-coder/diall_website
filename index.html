@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#1b1f24; --muted:#6b7380; --line:#e4e7ec;
+    --accent:#2f6fed; --accent-ink:#fff; --accent-soft:#e8effd; --danger:#d93c3c; --danger-soft:#fdecec;
+    --star:#e8a317; --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#111418; --panel:#1a1e24; --ink:#e8eaee; --muted:#9aa3b0; --line:#2a3039;
+      --accent:#5b8ff9; --accent-soft:#1f2a40; --danger:#f06363; --danger-soft:#3a1f22; --shadow:none; }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  button,input,textarea,select{font:inherit;color:inherit}
+  .app{display:grid;grid-template-columns:340px 1fr;grid-template-rows:auto 1fr;height:100vh}
+  header.top{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header.top h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .store{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#aaa}
+  .dot.ok{background:#2fa56a}.dot.local{background:var(--star)}
+  .spacer{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:9px;cursor:pointer;font-weight:500;white-space:nowrap}
+  .btn:hover{border-color:var(--muted)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.danger{color:var(--danger)}
+  .btn.danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+  .btn.ghost{border-color:transparent;background:transparent}
+  .btn.ghost:hover{background:var(--accent-soft)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .layout{display:contents}
+  aside{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+  .searchbar{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+  .searchbar input{flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+  .filters{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;background:transparent}
+  .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .list{overflow:auto;flex:1}
+  .group{font-size:11px;font-weight:600;color:var(--muted);padding:10px 16px 4px;text-transform:uppercase;letter-spacing:.06em}
+  .item{display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer;border-left:3px solid transparent}
+  .item:hover{background:var(--bg)}
+  .item.sel{background:var(--accent-soft);border-left-color:var(--accent)}
+  .item .meta{min-width:0;flex:1}
+  .item .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .star{color:var(--star)}
+  .avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:600;color:#fff;flex:none;font-size:14px}
+  .avatar.lg{width:84px;height:84px;font-size:30px}
+  .count{font-size:12px;color:var(--muted);padding:8px 16px;border-top:1px solid var(--line)}
+  main{overflow:auto;min-height:0}
+  .empty{height:100%;display:grid;place-items:center;text-align:center;color:var(--muted);padding:40px}
+  .empty h2{color:var(--ink);font-size:18px;margin:12px 0 6px}
+  .detail{max-width:760px;margin:0 auto;padding:28px 24px 60px}
+  .dhead{display:flex;gap:20px;align-items:center;margin-bottom:22px}
+  .dhead h2{margin:0;font-size:24px;letter-spacing:-.01em}
+  .dhead .role{color:var(--muted);margin-top:4px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 18px;margin-bottom:16px}
+  .row{display:grid;grid-template-columns:130px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--muted);font-size:13px}
+  .row .v{word-break:break-word;white-space:pre-wrap}
+  .row .v a{color:var(--accent);text-decoration:none}
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:12px;margin:0 4px 4px 0}
+  .stamp{font-size:12px;color:var(--muted)}
+  /* modal */
+  .scrim{position:fixed;inset:0;background:rgba(10,14,20,.45);display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;z-index:50;overflow:auto}
+  .scrim.open{display:flex}
+  .modal{background:var(--panel);border-radius:14px;width:100%;max-width:620px;box-shadow:0 20px 60px rgba(0,0,0,.3);border:1px solid var(--line)}
+  .modal header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+  .modal header h3{margin:0;font-size:16px;flex:1}
+  .modal .body{padding:18px 20px}
+  .modal footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:12px;font-weight:600;color:var(--muted)}
+  .field input,.field textarea{padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+  .field input:focus,.field textarea:focus,.searchbar input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .err{color:var(--danger);font-size:12px;min-height:16px}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);cursor:pointer}
+  .drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  textarea.paste{width:100%;min-height:110px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .preview{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:12px}
+  .preview table{width:100%;border-collapse:collapse;font-size:12px}
+  .preview th,.preview td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+  .preview th{position:sticky;top:0;background:var(--panel)}
+  .note{font-size:12px;color:var(--muted);margin:8px 0 0}
+  .seg{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .opt{border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;flex:1;min-width:150px}
+  .opt.on{border-color:var(--accent);background:var(--accent-soft)}
+  .opt b{display:block;margin-bottom:3px}
+  .opt span{font-size:12px;color:var(--muted)}
+  pre.out{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;z-index:80;pointer-events:none;max-width:90vw}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  .back{display:none}
+  /* bottom navigation */
+  :root{--nav-h:64px}
+  .app{height:calc(100vh - var(--nav-h) - env(safe-area-inset-bottom));height:calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom))}
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav-h) + env(safe-area-inset-bottom));padding:0 8px env(safe-area-inset-bottom);background:var(--panel);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:40;box-shadow:0 -2px 12px rgba(16,24,40,.05)}
+  .bottomnav button{flex:1;max-width:220px;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;position:relative;padding:6px 4px;-webkit-tap-highlight-color:transparent}
+  .bottomnav button:hover{color:var(--ink)}
+  .bottomnav button.on{color:var(--accent);font-weight:600}
+  .bottomnav button.on::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+  .bottomnav .ic{position:relative;display:grid;place-items:center;width:52px;height:28px;border-radius:14px;transition:background .15s}
+  .bottomnav button.on .ic{background:var(--accent-soft)}
+  .bottomnav svg{width:21px;height:21px}
+  .bottomnav button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:10px}
+  .badge{position:absolute;top:-5px;right:2px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
+  .badge:empty{display:none}
+  .bottomnav .short{display:none}
+  @media (min-width:761px){
+    .bottomnav button{flex-direction:row;gap:8px;font-size:13px}
+    .bottomnav .ic{width:40px}
+  }
+  @media (max-width:480px){ .bottomnav .full{display:none} .bottomnav .short{display:inline} }
+  .toast{bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))}
+  /* duplicates view */
+  .dupwrap{max-width:880px;margin:0 auto;padding:24px 20px 40px}
+  .duphead{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .duphead h2{margin:0;font-size:22px;letter-spacing:-.01em}
+  .duphead p{margin:4px 0 0;color:var(--muted)}
+  .dupsearch{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin-bottom:16px}
+  .dupgroup{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+  .dupgroup .gh{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
+  .dupgroup .gh .key{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dupgroup .gh .n{font-size:12px;color:var(--muted)}
+  .dupitem{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .dupitem:last-child{border-bottom:0}
+  .dupitem.kept{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
+  .dupitem .meta{flex:1;min-width:0}
+  .dupitem .nm{font-weight:600}
+  .dupitem .sub{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dupitem .acts{display:flex;gap:6px;align-items:center}
+  .keep{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  @media (max-width:560px){ .dupitem{flex-wrap:wrap} .dupitem .acts{width:100%;justify-content:flex-end} .dupwrap{padding:18px 14px 30px} }
+  @media (max-width:760px){
+    .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .app.viewing aside{display:none}
+    .app:not(.viewing) main{display:none}
+    .back{display:inline-flex}
+    .grid2{grid-template-columns:1fr}
+    .row{grid-template-columns:1fr;gap:2px}
+    header.top .lbl{display:none}
+  }
+  .app.dupview{grid-template-columns:1fr}
+  .app.dupview aside{display:none}
+  .app.dupview main{display:block}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <h1>Contacts</h1>
+    <div class="store"><span class="dot" id="storeDot"></span><span id="storeTxt">Loading…</span></div>
+    <div class="spacer"></div>
+    <button class="btn" id="importBtn" title="Import contacts">⤓ <span class="lbl">Import</span></button>
+    <button class="btn" id="exportAllBtn" title="Export all contacts">⤒ <span class="lbl">Export all</span></button>
+    <button class="btn primary" id="addBtn">＋ <span class="lbl">New contact</span></button>
+  </header>
+
+  <aside>
+    <div class="searchbar"><input id="search" type="search" placeholder="Search name, phone, email, company, tag…" autocomplete="off"></div>
+    <div class="filters" id="filters"></div>
+    <div class="list" id="list"></div>
+    <div class="count" id="count"></div>
+  </aside>
+
+  <main id="main"></main>
+</div>
+
+<nav class="bottomnav" id="bottomnav" aria-label="Main">
+  <button data-view="contacts" aria-label="Contacts">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+    <span>Contacts</span>
+  </button>
+  <button data-view="dup-phone" aria-label="Duplicate numbers">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="badge" id="badgePhone"></span></span>
+    <span><span class="full">Duplicate numbers</span><span class="short">Numbers</span></span>
+  </button>
+  <button data-view="dup-name" aria-label="Duplicate names">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></svg><span class="badge" id="badgeName"></span></span>
+    <span><span class="full">Duplicate names</span><span class="short">Names</span></span>
+  </button>
+</nav>
+
+<!-- Edit modal -->
+<div class="scrim" id="editScrim">
+  <form class="modal" id="editForm" novalidate>
+    <header><h3 id="editTitle">New contact</h3><button type="button" class="btn ghost" data-close>✕</button></header>
+    <div class="body">
+      <div class="grid2">
+        <div class="field"><label for="f_firstName">First name</label><input id="f_firstName" name="firstName"></div>
+        <div class="field"><label for="f_lastName">Last name</label><input id="f_lastName" name="lastName"></div>
+        <div class="field"><label for="f_phone">Phone</label><input id="f_phone" name="phone" type="tel"></div>
+        <div class="field"><label for="f_email">Email</label><input id="f_email" name="email" type="email"></div>
+        <div class="field"><label for="f_company">Company</label><input id="f_company" name="company"></div>
+        <div class="field"><label for="f_jobTitle">Job title</label><input id="f_jobTitle" name="jobTitle"></div>
+        <div class="field full"><label for="f_address">Address</label><input id="f_address" name="address"></div>
+        <div class="field"><label for="f_birthday">Birthday</label><input id="f_birthday" name="birthday" type="date"></div>
+        <div class="field"><label for="f_website">Website</label><input id="f_website" name="website" placeholder="https://"></div>
+        <div class="field full"><label for="f_tags">Tags <span style="font-weight:400">(comma separated)</span></label><input id="f_tags" name="tags" placeholder="family, work"></div>
+        <div class="field full"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes" rows="3"></textarea></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="f_favorite" name="favorite"> Mark as favorite</label>
+      <div class="err" id="editErr"></div>
+    </div>
+    <footer><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">Save contact</button></footer>
+  </form>
+</div>
+
+<!-- Import modal -->
+<div class="scrim" id="importScrim">
+  <div class="modal">
+    <header><h3>Import contacts</h3><button type="button" class="btn ghost" data-close>✕</button></header>
+    <div class="body">
+      <div class="drop" id="drop">
+        <div style="font-size:26px">📇</div>
+        <div><b>Choose a file</b> or drop it here</div>
+        <div class="note">vCard (.vcf), CSV (.csv — Google / Outlook / any), or JSON (.json). One contact or many.</div>
+        <input type="file" id="fileInput" accept=".vcf,.vcard,.csv,.json,.txt,text/vcard,text/csv,application/json" hidden>
+      </div>
+      <p class="note" style="margin-top:14px">…or paste vCard, CSV or JSON text:</p>
+      <textarea class="paste field" id="pasteBox" placeholder="BEGIN:VCARD&#10;VERSION:3.0&#10;FN:Jane Doe&#10;TEL:+1 555 0100&#10;END:VCARD"></textarea>
+      <div class="err" id="importErr"></div>
+      <div id="importPreview"></div>
+    </div>
+    <footer>
+      <label style="display:flex;gap:6px;align-items:center;margin-right:auto;font-size:13px"><input type="checkbox" id="skipDupes" checked> Skip duplicates</label>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="button" class="btn primary" id="doImport" disabled>Import</button>
+    </footer>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="scrim" id="exportScrim">
+  <div class="modal">
+    <header><h3 id="exportTitle">Export</h3><button type="button" class="btn ghost" data-close>✕</button></header>
+    <div class="body">
+      <div class="seg" id="fmtSeg"></div>
+      <pre class="out" id="exportOut"></pre>
+      <p class="note" id="exportNote"></p>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="copyExport">Copy</button>
+      <button type="button" class="btn primary" id="saveExport">Download</button>
+    </footer>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="scrim" id="confirmScrim">
+  <div class="modal" style="max-width:420px">
+    <header><h3 id="confirmTitle">Delete contact?</h3></header>
+    <div class="body"><p id="confirmMsg" style="margin:0"></p></div>
+    <footer><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" id="confirmOk" style="background:var(--danger);border-color:var(--danger)">Delete</button></footer>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // ---------- state ----------
+  const FIELDS = ["firstName","lastName","phone","email","company","jobTitle","address","birthday","website","tags","notes","favorite"];
+  let contacts = [];         // array of contact objects
+  let selectedId = null;
+  let query = "";
+  let filter = "all";        // all | fav | tag:<name>
+  let editingId = null;
+  let pendingImport = [];
+  let exportCtx = null;      // {items, label}
+  let exportFmt = "csv";
+
+  // storage backends
+  let backend = "local";     // "db" | "local"
+  let dbCol = null;
+  let downloads = null;
+  const LS_KEY = "contact-manager.v1";
+
+  const $ = (s, r=document) => r.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const uid = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const fullName = c => [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || c.company || c.email || c.phone || "Unnamed";
+  const initials = c => {
+    const n = fullName(c).split(/\s+/).filter(Boolean);
+    return ((n[0]?.[0] || "?") + (n.length > 1 ? n[n.length-1][0] : "")).toUpperCase();
+  };
+  const COLORS = ["#2f6fed","#1f9d72","#c2410c","#7c3aed","#db2777","#0891b2","#ca8a04","#4f46e5","#059669","#b45309"];
+  const colorFor = c => { let h=0; for (const ch of (c.id||fullName(c))) h=(h*31+ch.charCodeAt(0))>>>0; return COLORS[h%COLORS.length]; };
+  const tagList = c => (Array.isArray(c.tags) ? c.tags : String(c.tags||"").split(",")).map(t=>t.trim()).filter(Boolean);
+
+  function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2400); }
+
+  function normalize(raw){
+    const c = { id: raw.id && /^[A-Za-z0-9_\-.~:@+]{1,100}$/.test(raw.id) ? raw.id : uid() };
+    for (const f of FIELDS){
+      if (f === "favorite") c.favorite = !!raw.favorite && raw.favorite !== "false";
+      else if (f === "tags") c.tags = tagList(raw);
+      else c[f] = raw[f] == null ? "" : String(raw[f]).trim();
+    }
+    c.createdAt = raw.createdAt || new Date().toISOString();
+    c.updatedAt = raw.updatedAt || c.createdAt;
+    return c;
+  }
+
+  // ---------- persistence ----------
+  function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(contacts)); } catch(e){} }
+  function loadLocal(){ try { const v = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); return Array.isArray(v) ? v.map(normalize) : []; } catch(e){ return []; } }
+
+  async function persist(c){
+    if (backend === "db"){
+      try { await dbCol.doc(c.id).set(JSON.parse(JSON.stringify(c))); }
+      catch(e){ handleDbError(e); }
+    } else saveLocal();
+  }
+  async function removeStored(id){
+    if (backend === "db"){
+      try { await dbCol.doc(id).delete(); } catch(e){ handleDbError(e); }
+    } else saveLocal();
+  }
+  function handleDbError(e){
+    if (e && e.code === "quota_exceeded") toast("Storage is full — delete some contacts to add more.");
+    else if (e && e.code === "invalid_argument") { toast("Can't save to your account here — using this browser instead."); switchToLocal(); }
+    else toast("Couldn't save just now. Please try again.");
+  }
+  function switchToLocal(){ backend="local"; saveLocal(); setStore(); }
+
+  function setStore(state){
+    const dot=$("#storeDot"), txt=$("#storeTxt");
+    if (state === "loading"){ dot.className="dot"; txt.textContent="Loading…"; return; }
+    if (state === "stale"){ dot.className="dot local"; txt.textContent="Can't reach storage yet"; return; }
+    if (backend === "db"){ dot.className="dot ok"; txt.textContent="Saved to your account"; }
+    else { dot.className="dot local"; txt.textContent="Saved in this browser"; }
+  }
+
+  async function initStorage(){
+    contacts = loadLocal();
+    setStore("loading");
+    render();
+    if (!window.claude || typeof window.claude.use !== "function"){ setStore(); return; }
+    try {
+      claude.use("downloads").then(d => { downloads = d; }).catch(()=>{});
+      const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+      const id = user ? await user.id() : null;
+      if (!db || !id){ setStore(); return; }
+      dbCol = db.collection("data/users/" + id);
+      backend = "db";
+      const timer = setTimeout(() => setStore("stale"), 10000);
+      let first = true;
+      dbCol.onSnapshot(snap => {
+        if (!snap.metadata.fromCache){ clearTimeout(timer); setStore(); }
+        const remote = snap.docs.filter(d=>d.exists).map(d => normalize({ ...d.data(), id: d.id }));
+        if (first){
+          first = false;
+          // one-time migration: move contacts saved only in this browser into the account
+          const ids = new Set(remote.map(r=>r.id));
+          const toMove = contacts.filter(c => !ids.has(c.id));
+          if (toMove.length && !snap.metadata.fromCache){
+            (async () => { for (const c of toMove) { try { await dbCol.doc(c.id).set(c); } catch(e){ handleDbError(e); break; } } try{localStorage.removeItem(LS_KEY);}catch(e){} })();
+            contacts = remote.concat(toMove);
+            render(); return;
+          }
+        }
+        contacts = remote;
+        if (selectedId && !contacts.some(c=>c.id===selectedId)) selectedId = null;
+        render();
+      }, err => { clearTimeout(timer); switchToLocal(); render(); });
+    } catch(e){ backend="local"; setStore(); }
+  }
+
+  // ---------- rendering ----------
+  function sorted(list){
+    return [...list].sort((a,b) => fullName(a).localeCompare(fullName(b), undefined, {sensitivity:"base"}));
+  }
+  function visible(){
+    const q = query.toLowerCase().trim();
+    return sorted(contacts).filter(c => {
+      if (filter === "fav" && !c.favorite) return false;
+      if (filter.startsWith("tag:") && !tagList(c).includes(filter.slice(4))) return false;
+      if (!q) return true;
+      const hay = [fullName(c), c.phone, c.email, c.company, c.jobTitle, c.address, c.notes, ...tagList(c)].join(" ").toLowerCase();
+      const digits = q.replace(/\D/g,"");
+      return hay.includes(q) || (digits.length >= 3 && String(c.phone).replace(/\D/g,"").includes(digits));
+    });
+  }
+
+  function renderFilters(){
+    const tags = [...new Set(contacts.flatMap(tagList))].sort((a,b)=>a.localeCompare(b));
+    const favs = contacts.filter(c=>c.favorite).length;
+    let h = `<button class="chip ${filter==="all"?"on":""}" data-f="all">All · ${contacts.length}</button>`;
+    h += `<button class="chip ${filter==="fav"?"on":""}" data-f="fav">★ Favorites · ${favs}</button>`;
+    for (const t of tags) h += `<button class="chip ${filter==="tag:"+t?"on":""}" data-f="tag:${esc(t)}">${esc(t)}</button>`;
+    $("#filters").innerHTML = h;
+    if (filter.startsWith("tag:") && !tags.includes(filter.slice(4))) filter = "all";
+  }
+
+  function renderList(){
+    const items = visible();
+    let h = "", letter = "";
+    for (const c of items){
+      const L = (fullName(c)[0] || "#").toUpperCase();
+      const g = /[A-Z]/.test(L) ? L : "#";
+      if (g !== letter){ letter = g; h += `<div class="group">${g}</div>`; }
+      const sub = c.phone || c.email || c.company || "";
+      h += `<div class="item ${c.id===selectedId?"sel":""}" data-id="${esc(c.id)}">
+        <div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div><div class="sub">${esc(sub)}</div></div></div>`;
+    }
+    if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
+    $("#list").innerHTML = h;
+    $("#count").textContent = items.length === contacts.length ? `${contacts.length} contact${contacts.length===1?"":"s"}` : `${items.length} of ${contacts.length} shown`;
+  }
+
+  function row(k, v){ return v ? `<div class="row"><div class="k">${k}</div><div class="v">${v}</div></div>` : ""; }
+  function fmtDate(d){ if(!d) return ""; const t = new Date(d + (d.length===10?"T00:00:00":"")); return isNaN(t) ? esc(d) : t.toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}); }
+  function safeUrl(u){ if(!u) return ""; const s = /^https?:\/\//i.test(u) ? u : "https://"+u; try { const x=new URL(s); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch(e){ return ""; } }
+
+  function renderMain(){
+    const c = contacts.find(x => x.id === selectedId);
+    $("#app").classList.toggle("viewing", !!c);
+    if (!c){
+      $("#main").innerHTML = `<div class="empty"><div><div style="font-size:40px">👥</div>
+        <h2>${contacts.length ? "Select a contact" : "Your contact list is empty"}</h2>
+        <p>${contacts.length ? "Pick someone from the list to see their details." : "Add your first contact, or import a vCard, CSV or JSON file."}</p>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
+          <button class="btn primary" data-act="add">＋ New contact</button><button class="btn" data-act="import">⤓ Import</button></div></div></div>`;
+      return;
+    }
+    const url = safeUrl(c.website);
+    const role = [c.jobTitle, c.company].filter(Boolean).join(" · ");
+    $("#main").innerHTML = `<div class="detail">
+      <button class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
+      <div class="dhead">
+        <div class="avatar lg" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        <div><h2>${esc(fullName(c))}</h2>${role?`<div class="role">${esc(role)}</div>`:""}</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" data-act="edit">✎ Edit</button>
+        <button class="btn" data-act="fav">${c.favorite?'<span class="star">★</span> Favorited':'☆ Favorite'}</button>
+        <button class="btn" data-act="export1">⤒ Export contact</button>
+        <button class="btn" data-act="dup">⧉ Duplicate</button>
+        <button class="btn danger" data-act="delete">🗑 Delete</button>
+      </div>
+      <div class="card">
+        ${row("Phone", c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>` : "")}
+        ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "")}
+        ${row("Company", esc(c.company))}
+        ${row("Job title", esc(c.jobTitle))}
+        ${row("Address", esc(c.address))}
+        ${row("Birthday", fmtDate(c.birthday))}
+        ${row("Website", url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(c.website)}</a>` : "")}
+        ${row("Tags", tagList(c).map(t=>`<span class="tag">${esc(t)}</span>`).join(""))}
+        ${row("Notes", esc(c.notes))}
+        ${!(c.phone||c.email||c.company||c.jobTitle||c.address||c.birthday||c.website||tagList(c).length||c.notes) ? '<div class="row"><div class="k">Details</div><div class="v" style="color:var(--muted)">No details yet — click Edit to add some.</div></div>' : ""}
+      </div>
+      <div class="stamp">Added ${new Date(c.createdAt).toLocaleString()}${c.updatedAt && c.updatedAt!==c.createdAt ? ` · Updated ${new Date(c.updatedAt).toLocaleString()}` : ""}</div>
+    </div>`;
+  }
+
+  // ---------- duplicates ----------
+  const phoneKey = c => { const d = String(c.phone||"").replace(/\D/g,""); if (d.length < 6) return ""; return d.length > 10 ? d.slice(-10) : d; };
+  const nameKey = c => [c.firstName, c.lastName].join(" ").normalize("NFD").replace(/[̀-ͯ]/g,"")
+      .toLowerCase().replace(/[^a-z0-9\s]/g," ").trim().split(/\s+/).filter(Boolean).sort().join(" ");
+  function dupGroups(kind){
+    const fn = kind === "dup-phone" ? phoneKey : nameKey;
+    const m = new Map();
+    for (const c of contacts){ const k = fn(c); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(c); }
+    return [...m.entries()].filter(([,v]) => v.length > 1)
+      .map(([key, items]) => ({ key, items: [...items].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt))) }))
+      .sort((a,b) => b.items.length - a.items.length || fullName(a.items[0]).localeCompare(fullName(b.items[0])));
+  }
+  const keepChoice = new Map();   // "kind|key" -> id to keep when merging
+  let dupQuery = "";
+
+  function renderBadges(){
+    const extra = k => dupGroups(k).reduce((s,g) => s + g.items.length - 1, 0);
+    const p = extra("dup-phone"), n = extra("dup-name");
+    $("#badgePhone").textContent = p ? (p > 99 ? "99+" : p) : "";
+    $("#badgeName").textContent = n ? (n > 99 ? "99+" : n) : "";
+    document.querySelectorAll("#bottomnav [data-view]").forEach(b => {
+      const on = b.dataset.view === view; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false");
+    });
+  }
+
+  function renderDups(){
+    $("#app").classList.remove("viewing");
+    const kind = view, isPhone = kind === "dup-phone";
+    const all = dupGroups(kind);
+    const q = dupQuery.toLowerCase().trim();
+    const groups = q ? all.filter(g => g.items.some(c => [fullName(c), c.phone, c.email].join(" ").toLowerCase().includes(q))) : all;
+    const extra = all.reduce((s,g) => s + g.items.length - 1, 0);
+    const title = isPhone ? "Duplicate numbers" : "Duplicate names";
+    const sub = all.length
+      ? `${all.length} group${all.length===1?"":"s"} · ${extra} extra contact${extra===1?"":"s"} can be merged`
+      : (isPhone ? "Contacts sharing the same phone number appear here." : "Contacts with the same first and last name appear here.");
+    let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>${title}</h2><p>${sub}</p></div>
+      ${all.length > 1 ? `<button class="btn primary" data-dact="mergeAll">Merge all ${all.length} groups</button>` : ""}</div>`;
+    if (!all.length){
+      h += `<div class="card" style="text-align:center;padding:40px 20px"><div style="font-size:36px">✅</div>
+        <h3 style="margin:10px 0 4px">No duplicate ${isPhone ? "numbers" : "names"}</h3>
+        <p style="color:var(--muted);margin:0">${contacts.length ? "Your list is clean." : "Add or import contacts first."}</p></div></div>`;
+      $("#main").innerHTML = h; return;
+    }
+    h += `<input class="dupsearch" id="dupSearch" type="search" placeholder="Filter these groups…" value="${esc(dupQuery)}">`;
+    if (!groups.length) h += `<p style="color:var(--muted)">No groups match “${esc(dupQuery)}”.</p>`;
+    for (const g of groups){
+      const gk = kind + "|" + g.key;
+      let keepId = keepChoice.get(gk);
+      if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
+      const label = isPhone ? (g.items[0].phone) : fullName(g.items[0]);
+      h += `<div class="dupgroup"><div class="gh">
+        <span>${isPhone ? "📞" : "👤"}</span><span class="key">${esc(label)}</span><span class="n">${g.items.length} contacts</span>
+        <button class="btn sm primary" data-dact="merge" data-g="${esc(gk)}">Merge into one</button></div>`;
+      for (const c of g.items){
+        h += `<div class="dupitem ${c.id===keepId?"kept":""}">
+          <div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+          <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div>
+            <div class="sub">${esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No other details")} · added ${new Date(c.createdAt).toLocaleDateString()}</div></div>
+          <div class="acts">
+            <label class="keep"><input type="radio" name="keep-${esc(gk)}" data-g="${esc(gk)}" value="${esc(c.id)}" ${c.id===keepId?"checked":""}> Keep</label>
+            <button class="btn sm" data-dact="view" data-id="${esc(c.id)}">View</button>
+            <button class="btn sm danger" data-dact="delete" data-id="${esc(c.id)}" aria-label="Delete">🗑</button>
+          </div></div>`;
+      }
+      h += `</div>`;
+    }
+    h += `<p class="note">Merging keeps the contact marked <b>Keep</b>, fills its empty fields from the others, combines tags and notes, saves any different phone or email into its notes, and deletes the rest.</p></div>`;
+    const hadFocus = document.activeElement?.id === "dupSearch";
+    $("#main").innerHTML = h;
+    if (hadFocus){ const s = $("#dupSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  }
+
+  function mergeContacts(primary, others){
+    const m = { ...primary, tags: tagList(primary) };
+    const extraNotes = [];
+    for (const o of others){
+      for (const f of FIELDS){
+        if (f === "tags" || f === "favorite" || f === "notes") continue;
+        if (!m[f] && o[f]) m[f] = o[f];
+      }
+      m.favorite = m.favorite || o.favorite;
+      m.tags = [...new Set([...m.tags, ...tagList(o)])];
+      if (o.phone && phoneKey(o) !== phoneKey(m) && o.phone !== m.phone) extraNotes.push("Other phone: " + o.phone);
+      if (o.email && o.email.toLowerCase() !== String(m.email).toLowerCase()) extraNotes.push("Other email: " + o.email);
+      if (o.notes && !String(m.notes).includes(o.notes)) extraNotes.push(o.notes);
+    }
+    const uniq = [...new Set(extraNotes)].filter(n => !String(m.notes).includes(n));
+    if (uniq.length) m.notes = [m.notes, ...uniq].filter(Boolean).join("\n");
+    m.updatedAt = new Date().toISOString();
+    return normalize(m);
+  }
+
+  async function runMerges(plan){   // plan: [{keepId, removeIds}]
+    const merged = [], removed = [];
+    for (const p of plan){
+      const keep = contacts.find(c => c.id === p.keepId);
+      const others = contacts.filter(c => p.removeIds.includes(c.id));
+      if (!keep || !others.length) continue;
+      const m = mergeContacts(keep, others);
+      contacts = contacts.filter(c => !p.removeIds.includes(c.id)).map(c => c.id === m.id ? m : c);
+      merged.push(m); removed.push(...p.removeIds);
+    }
+    render();
+    for (const m of merged) await persist(m);
+    for (const id of removed) await removeStored(id);
+    toast(`Merged ${removed.length + merged.length} contacts into ${merged.length}`);
+  }
+
+  function planFor(gk){
+    const [kind, ...rest] = gk.split("|"); const key = rest.join("|");
+    const g = dupGroups(kind).find(x => x.key === key); if (!g) return null;
+    let keepId = keepChoice.get(gk); if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
+    return { keepId, removeIds: g.items.filter(c => c.id !== keepId).map(c => c.id), group: g };
+  }
+
+  function handleDup(btn){
+    const act = btn.dataset.dact;
+    if (act === "view"){ setView("contacts"); selectedId = btn.dataset.id; render(); return; }
+    if (act === "delete"){ const c = contacts.find(x => x.id === btn.dataset.id); if (c) confirmDelete(c); return; }
+    if (act === "merge"){
+      const p = planFor(btn.dataset.g); if (!p) return;
+      const keep = p.group.items.find(c => c.id === p.keepId);
+      askConfirm("Merge contacts?",
+        `<b>${p.group.items.length}</b> contacts will become one, keeping <b>${esc(fullName(keep))}</b>. The other ${p.removeIds.length} will be deleted — this can't be undone.`,
+        "Merge", () => runMerges([p]));
+      return;
+    }
+    if (act === "mergeAll"){
+      const groups = dupGroups(view);
+      const plans = groups.map(g => planFor(view + "|" + g.key)).filter(Boolean);
+      const n = plans.reduce((s,p) => s + p.removeIds.length, 0);
+      askConfirm("Merge all groups?",
+        `Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep, and <b>${n}</b> duplicate contacts will be deleted. This can't be undone.`,
+        "Merge all", () => runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
+    }
+  }
+
+  // ---------- views & routing ----------
+  let view = "contacts";
+  const HASH = { "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
+  function viewFromHash(){ const h = location.hash.slice(1); return h === HASH["dup-phone"] ? "dup-phone" : h === HASH["dup-name"] ? "dup-name" : "contacts"; }
+  function setView(v){
+    view = v;
+    const want = HASH[v] ? "#" + HASH[v] : "";
+    if (location.hash !== want){
+      try { history.replaceState(null, "", want || location.pathname + location.search); } catch(e){ if (want) location.hash = want; }
+    }
+  }
+  view = viewFromHash();
+  window.addEventListener("hashchange", () => { view = viewFromHash(); render(); });
+  document.getElementById("bottomnav").addEventListener("click", e => {
+    const b = e.target.closest("[data-view]"); if (!b) return;
+    const v = b.dataset.view;
+    if (v === "contacts" && view === "contacts" && selectedId && matchMedia("(max-width:760px)").matches) selectedId = null;
+    setView(v); dupQuery = ""; render(); $("#main").scrollTop = 0;
+  });
+
+  function render(){
+    renderFilters(); renderList();
+    $("#app").classList.toggle("dupview", view !== "contacts");
+    if (view === "contacts") renderMain(); else renderDups();
+    renderBadges();
+  }
+
+  // ---------- modals ----------
+  function openModal(id){ $(id).classList.add("open"); }
+  function closeModal(el){ el.classList.remove("open"); }
+  document.querySelectorAll(".scrim").forEach(s => {
+    s.addEventListener("click", e => { if (e.target === s || e.target.closest("[data-close]")) closeModal(s); });
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".scrim.open").forEach(closeModal); });
+
+  // ----- edit -----
+  function openEdit(c){
+    editingId = c ? c.id : null;
+    $("#editTitle").textContent = c ? "Edit contact" : "New contact";
+    $("#editErr").textContent = "";
+    for (const f of FIELDS){
+      const el = $("#f_"+f);
+      if (f === "favorite") el.checked = !!c?.favorite;
+      else if (f === "tags") el.value = c ? tagList(c).join(", ") : "";
+      else el.value = c?.[f] || "";
+    }
+    openModal("#editScrim");
+    setTimeout(()=>$("#f_firstName").focus(), 30);
+  }
+  $("#editForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const raw = {};
+    for (const f of FIELDS){ const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    if (![raw.firstName, raw.lastName, raw.company, raw.phone, raw.email].some(v=>String(v).trim())){
+      $("#editErr").textContent = "Add at least a name, company, phone or email."; return;
+    }
+    if (raw.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.email.trim())){ $("#editErr").textContent = "That email address doesn't look right."; return; }
+    const now = new Date().toISOString();
+    let c;
+    if (editingId){
+      const old = contacts.find(x=>x.id===editingId);
+      c = normalize({ ...old, ...raw, id: editingId, createdAt: old?.createdAt, updatedAt: now });
+      contacts = contacts.map(x => x.id===editingId ? c : x);
+    } else {
+      c = normalize({ ...raw, createdAt: now, updatedAt: now });
+      contacts.push(c);
+    }
+    selectedId = c.id;
+    setView("contacts");
+    closeModal($("#editScrim"));
+    render();
+    await persist(c);
+    toast(editingId ? "Contact updated" : "Contact added");
+  });
+
+  // ----- delete -----
+  function askConfirm(title, html, okLabel, onOk){
+    $("#confirmTitle").textContent = title;
+    $("#confirmMsg").innerHTML = html;
+    $("#confirmOk").textContent = okLabel;
+    openModal("#confirmScrim");
+    $("#confirmOk").onclick = async () => { closeModal($("#confirmScrim")); await onOk(); };
+  }
+  function confirmDelete(c){
+    askConfirm("Delete contact?", `<b>${esc(fullName(c))}</b> will be permanently removed. This can't be undone.`, "Delete", async () => {
+      contacts = contacts.filter(x => x.id !== c.id);
+      if (selectedId === c.id) selectedId = null;
+      render();
+      await removeStored(c.id);
+      toast("Contact deleted");
+    });
+  }
+
+  // ---------- formats: export ----------
+  const CSV_COLS = [["firstName","First Name"],["lastName","Last Name"],["phone","Phone"],["email","Email"],["company","Company"],["jobTitle","Job Title"],["address","Address"],["birthday","Birthday"],["website","Website"],["tags","Tags"],["notes","Notes"],["favorite","Favorite"]];
+  const csvCell = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  function toCSV(items){
+    const lines = [CSV_COLS.map(c=>c[1]).join(",")];
+    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="favorite" ? (c.favorite?"yes":"") : c[k])).join(","));
+    return lines.join("\r\n");
+  }
+  function toJSON(items){
+    const clean = items.map(c => { const o = {}; for (const f of FIELDS) o[f] = f==="tags" ? tagList(c) : c[f]; o.createdAt=c.createdAt; o.updatedAt=c.updatedAt; return o; });
+    return JSON.stringify(items.length === 1 && exportCtx?.single ? clean[0] : clean, null, 2);
+  }
+  const vEsc = s => String(s ?? "").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
+  function toVCard(items){
+    return items.map(c => {
+      const L = ["BEGIN:VCARD","VERSION:3.0",
+        `N:${vEsc(c.lastName)};${vEsc(c.firstName)};;;`, `FN:${vEsc(fullName(c))}`];
+      if (c.company) L.push(`ORG:${vEsc(c.company)}`);
+      if (c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
+      if (c.phone) L.push(`TEL;TYPE=CELL:${vEsc(c.phone)}`);
+      if (c.email) L.push(`EMAIL;TYPE=INTERNET:${vEsc(c.email)}`);
+      if (c.address) L.push(`ADR;TYPE=HOME:;;${vEsc(c.address)};;;;`);
+      if (c.birthday) L.push(`BDAY:${c.birthday}`);
+      if (c.website) L.push(`URL:${vEsc(c.website)}`);
+      if (tagList(c).length) L.push(`CATEGORIES:${tagList(c).map(vEsc).join(",")}`);
+      if (c.notes) L.push(`NOTE:${vEsc(c.notes)}`);
+      L.push("END:VCARD");
+      return L.join("\r\n");
+    }).join("\r\n");
+  }
+  const FORMATS = {
+    csv:  { label:"CSV",   desc:"Excel, Google Sheets, Outlook", ext:"csv",  make:toCSV },
+    json: { label:"JSON",  desc:"Full backup, re-importable",    ext:"json", make:toJSON },
+    vcf:  { label:"vCard", desc:"Phones, Gmail, iCloud, Outlook", ext:"txt", make:toVCard },
+  };
+  function slug(s){ return (s||"contacts").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "contacts"; }
+
+  function openExport(items, label, single){
+    if (!items.length){ toast("Nothing to export yet"); return; }
+    exportCtx = { items, label, single };
+    $("#exportTitle").textContent = single ? `Export “${label}”` : `Export ${items.length} contact${items.length===1?"":"s"}`;
+    if (single && exportFmt === "csv") exportFmt = "vcf";
+    renderExport();
+    openModal("#exportScrim");
+  }
+  function renderExport(){
+    $("#fmtSeg").innerHTML = Object.entries(FORMATS).map(([k,f]) =>
+      `<div class="opt ${k===exportFmt?"on":""}" data-fmt="${k}"><b>${f.label}</b><span>${f.desc}</span></div>`).join("");
+    const out = FORMATS[exportFmt].make(exportCtx.items);
+    $("#exportOut").textContent = out.length > 20000 ? out.slice(0,20000) + "\n…" : out;
+    const fn = exportFileName();
+    $("#exportNote").textContent = exportFmt === "vcf"
+      ? `Saves as ${fn}. Rename it to .vcf to open in Contacts apps — or use Copy and paste it into a new .vcf file.`
+      : `Saves as ${fn}.`;
+    $("#saveExport").style.display = downloads ? "" : "none";
+    if (!downloads) $("#exportNote").textContent = "Use Copy and paste into a file to save it.";
+  }
+  function exportFileName(){
+    const base = exportCtx.single ? slug(exportCtx.label) : "contacts-" + new Date().toISOString().slice(0,10);
+    return exportFmt === "vcf" ? base + ".vcf.txt" : base + "." + FORMATS[exportFmt].ext;
+  }
+  $("#fmtSeg").addEventListener("click", e => { const o = e.target.closest("[data-fmt]"); if (o){ exportFmt = o.dataset.fmt; renderExport(); } });
+  $("#copyExport").addEventListener("click", async () => {
+    const out = FORMATS[exportFmt].make(exportCtx.items);
+    try { await navigator.clipboard.writeText(out); toast("Copied to clipboard"); }
+    catch(e){ const r=document.createRange(); r.selectNodeContents($("#exportOut")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast("Text selected — press Ctrl/Cmd+C to copy"); }
+  });
+  $("#saveExport").addEventListener("click", async () => {
+    if (!downloads) return;
+    try {
+      await downloads.save({ filename: exportFileName(), data: FORMATS[exportFmt].make(exportCtx.items) });
+      toast("Saved"); closeModal($("#exportScrim"));
+    } catch(e){
+      if (e?.code === "declined") return;
+      if (e?.code === "rate_limited") toast("A save prompt is already open");
+      else { toast("Download isn't available here — use Copy instead"); downloads = null; renderExport(); }
+    }
+  });
+
+  // ---------- formats: import ----------
+  function parseCSV(text){
+    const rows = []; let row = [], cell = "", q = false;
+    for (let i=0;i<text.length;i++){
+      const ch = text[i];
+      if (q){
+        if (ch === '"'){ if (text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ",") { row.push(cell); cell=""; }
+      else if (ch === "\n" || ch === "\r"){ if (ch==="\r" && text[i+1]==="\n") i++; row.push(cell); rows.push(row); row=[]; cell=""; }
+      else cell += ch;
+    }
+    if (cell !== "" || row.length){ row.push(cell); rows.push(row); }
+    return rows.filter(r => r.some(c => c.trim() !== ""));
+  }
+  function mapHeader(h){
+    const s = h.toLowerCase().replace(/[^a-z0-9]/g,"");
+    if (/^(firstname|givenname|first)$/.test(s)) return "firstName";
+    if (/^(lastname|familyname|surname|last)$/.test(s)) return "lastName";
+    if (/^(name|fullname|displayname|contactname)$/.test(s)) return "_name";
+    if (s.includes("email") || s.includes("mail")) return "email";
+    if (s.includes("phone") || s.includes("mobile") || s.includes("tel") || s === "cell") return "phone";
+    if (s.includes("company") || s.includes("organization") || s.includes("organisation") || s === "org") return "company";
+    if (s.includes("jobtitle") || s === "title" || s.includes("position") || s.includes("role")) return "jobTitle";
+    if (s.includes("address") || s === "street" || s === "city") return "address";
+    if (s.includes("birthday") || s.includes("dob") || s.includes("birthdate")) return "birthday";
+    if (s.includes("website") || s.includes("webpage") || s === "url") return "website";
+    if (s.includes("tag") || s.includes("label") || s.includes("group") || s.includes("categor")) return "tags";
+    if (s.includes("note")) return "notes";
+    if (s.includes("favorite") || s.includes("favourite") || s === "starred") return "favorite";
+    return null;
+  }
+  function splitName(n){ const p = String(n).trim().split(/\s+/); return { firstName: p.slice(0,-1).join(" ") || p[0] || "", lastName: p.length>1 ? p[p.length-1] : "" }; }
+  function fromCSV(text){
+    const rows = parseCSV(text);
+    if (rows.length < 2) throw new Error("The CSV needs a header row and at least one contact.");
+    const map = rows[0].map(mapHeader);
+    if (!map.some(Boolean)) throw new Error("Couldn't recognise any columns (expected e.g. First Name, Phone, Email).");
+    return rows.slice(1).map(r => {
+      const o = {};
+      r.forEach((v, i) => {
+        const k = map[i]; v = (v||"").trim(); if (!k || !v) return;
+        if (k === "tags"){ o.tags = (o.tags ? o.tags+"," : "") + v.replace(/\s*:::\s*/g,",").replace(/;/g,",").replace(/\* ?myContacts/gi,""); }
+        else if (k === "favorite") o.favorite = /^(1|y|yes|true|x|★)$/i.test(v);
+        else if (k === "address") o.address = o.address ? o.address + ", " + v : v;
+        else if (!o[k]) o[k] = v;
+      });
+      if (o._name && !o.firstName && !o.lastName) Object.assign(o, splitName(o._name));
+      delete o._name;
+      return o;
+    });
+  }
+  const vUnesc = s => String(s).replace(/\\n/gi,"\n").replace(/\\([,;\\])/g,"$1");
+  function fromVCard(text){
+    const unfolded = text.replace(/\r\n/g,"\n").replace(/\n[ \t]/g,"");
+    const cards = unfolded.split(/BEGIN:VCARD/i).slice(1);
+    if (!cards.length) throw new Error("No vCard entries found.");
+    return cards.map(card => {
+      const o = {}; let fn = "";
+      for (const line of card.split("\n")){
+        const m = line.match(/^(?:[\w-]+\.)?([A-Za-z-]+)((?:;[^:]*)?):(.*)$/); if (!m) continue;
+        const key = m[1].toUpperCase(); let val = m[3].trim();
+        if (/ENCODING=QUOTED-PRINTABLE/i.test(m[2])) { try { val = decodeURIComponent(val.replace(/=([0-9A-F]{2})/gi,"%$1")); } catch(e){} }
+        switch (key){
+          case "N": { const p = val.split(";").map(vUnesc); o.lastName = p[0]||""; o.firstName = [p[1],p[2]].filter(Boolean).join(" "); break; }
+          case "FN": fn = vUnesc(val); break;
+          case "TEL": if (!o.phone) o.phone = vUnesc(val.replace(/^tel:/i,"")); break;
+          case "EMAIL": if (!o.email) o.email = vUnesc(val); break;
+          case "ORG": o.company = vUnesc(val.split(";").filter(Boolean).join(", ")); break;
+          case "TITLE": o.jobTitle = vUnesc(val); break;
+          case "ADR": if (!o.address) o.address = val.split(";").map(vUnesc).filter(s=>s.trim()).join(", "); break;
+          case "BDAY": { const d = val.replace(/^--/,"").match(/^(\d{4})-?(\d{2})-?(\d{2})/); o.birthday = d ? `${d[1]}-${d[2]}-${d[3]}` : ""; break; }
+          case "URL": if (!o.website) o.website = vUnesc(val); break;
+          case "NOTE": o.notes = vUnesc(val); break;
+          case "CATEGORIES": o.tags = vUnesc(val); break;
+        }
+      }
+      if (!o.firstName && !o.lastName && fn) Object.assign(o, splitName(fn));
+      return o;
+    });
+  }
+  function fromJSON(text){
+    let d = JSON.parse(text);
+    if (d && !Array.isArray(d)) d = Array.isArray(d.contacts) ? d.contacts : [d];
+    if (!Array.isArray(d)) throw new Error("JSON must be a contact object or a list of contacts.");
+    return d.filter(x => x && typeof x === "object").map(x => {
+      const o = { ...x };
+      if (!o.firstName && !o.lastName && o.name) Object.assign(o, splitName(o.name));
+      return o;
+    });
+  }
+  function parseAny(text, name=""){
+    const t = text.replace(/^\uFEFF/,"").trim();
+    if (!t) throw new Error("The file is empty.");
+    if (/\.vcf|\.vcard/i.test(name) || /^BEGIN:VCARD/i.test(t)) return fromVCard(t);
+    if (/\.json$/i.test(name) || /^[\[{]/.test(t)) return fromJSON(t);
+    return fromCSV(t);
+  }
+  const dupKey = c => (String(c.email||"").toLowerCase() || String(c.phone||"").replace(/\D/g,"") || fullName(c).toLowerCase());
+
+  function stageImport(text, name){
+    $("#importErr").textContent = ""; $("#importPreview").innerHTML = ""; pendingImport = []; $("#doImport").disabled = true;
+    let list;
+    try { list = parseAny(text, name); }
+    catch(e){ $("#importErr").textContent = e.message || "Couldn't read that data."; return; }
+    list = list.map(x => { const { id, createdAt, updatedAt, ...rest } = x; return normalize({ ...rest, id: undefined }); })
+               .filter(c => c.firstName || c.lastName || c.company || c.phone || c.email);
+    if (!list.length){ $("#importErr").textContent = "No contacts with a name, phone or email were found."; return; }
+    const existing = new Set(contacts.map(dupKey));
+    list.forEach(c => c._dupe = existing.has(dupKey(c)));
+    pendingImport = list;
+    const dupes = list.filter(c=>c._dupe).length;
+    $("#importPreview").innerHTML = `<p class="note"><b>${list.length}</b> contact${list.length===1?"":"s"} found${dupes?` · ${dupes} already in your list`:""}${name?` in ${esc(name)}`:""}.</p>
+      <div class="preview"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Company</th></tr></thead><tbody>
+      ${list.slice(0,200).map(c=>`<tr style="${c._dupe?"opacity:.5":""}"><td>${esc(fullName(c))}${c._dupe?" (duplicate)":""}</td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td><td>${esc(c.company)}</td></tr>`).join("")}
+      </tbody></table></div>`;
+    updateImportBtn();
+  }
+  function updateImportBtn(){
+    const n = pendingImport.filter(c => !($("#skipDupes").checked && c._dupe)).length;
+    $("#doImport").disabled = !n;
+    $("#doImport").textContent = n ? `Import ${n} contact${n===1?"":"s"}` : "Import";
+  }
+  $("#skipDupes").addEventListener("change", updateImportBtn);
+
+  function openImport(){
+    pendingImport = []; $("#pasteBox").value = ""; $("#importErr").textContent = ""; $("#importPreview").innerHTML = "";
+    $("#doImport").disabled = true; $("#doImport").textContent = "Import"; $("#fileInput").value = "";
+    openModal("#importScrim");
+  }
+  function readFile(file){
+    if (!file) return;
+    if (file.size > 10*1024*1024){ $("#importErr").textContent = "That file is over 10 MB."; return; }
+    const r = new FileReader();
+    r.onload = () => { $("#pasteBox").value = ""; stageImport(String(r.result), file.name); };
+    r.onerror = () => { $("#importErr").textContent = "Couldn't read that file."; };
+    r.readAsText(file);
+  }
+  const drop = $("#drop");
+  drop.addEventListener("click", () => $("#fileInput").click());
+  $("#fileInput").addEventListener("change", e => readFile(e.target.files[0]));
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => readFile(e.dataTransfer.files[0]));
+  let pasteT; $("#pasteBox").addEventListener("input", e => { clearTimeout(pasteT); const v=e.target.value; pasteT=setTimeout(()=>{ if (v.trim()) stageImport(v, ""); else { pendingImport=[]; $("#importPreview").innerHTML=""; $("#importErr").textContent=""; updateImportBtn(); } }, 300); });
+
+  $("#doImport").addEventListener("click", async () => {
+    const skip = $("#skipDupes").checked;
+    const toAdd = pendingImport.filter(c => !(skip && c._dupe)).map(c => { const { _dupe, ...rest } = c; return rest; });
+    if (!toAdd.length) return;
+    $("#doImport").disabled = true;
+    contacts = contacts.concat(toAdd);
+    if (toAdd.length === 1) selectedId = toAdd[0].id;
+    closeModal($("#importScrim"));
+    render();
+    if (backend === "db"){
+      let n = 0;
+      for (const c of toAdd){
+        try { await dbCol.doc(c.id).set(c); n++; }
+        catch(e){ handleDbError(e); if (backend !== "db") break; if (e?.code === "quota_exceeded") break; }
+      }
+      if (backend === "local") saveLocal();
+    } else saveLocal();
+    toast(`Imported ${toAdd.length} contact${toAdd.length===1?"":"s"}`);
+  });
+
+  // ---------- events ----------
+  $("#addBtn").addEventListener("click", () => openEdit(null));
+  $("#importBtn").addEventListener("click", openImport);
+  $("#exportAllBtn").addEventListener("click", () => {
+    const vis = visible();
+    const items = (query || filter !== "all") ? vis : sorted(contacts);
+    openExport(items, "contacts", false);
+  });
+  $("#search").addEventListener("input", e => { query = e.target.value; renderList(); });
+  $("#filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b){ filter = b.dataset.f; renderFilters(); renderList(); } });
+  $("#list").addEventListener("click", e => { const it = e.target.closest(".item"); if (it){ selectedId = it.dataset.id; renderList(); renderMain(); $("#main").scrollTop = 0; } });
+  $("#main").addEventListener("change", e => {
+    const r = e.target.closest('input[type="radio"][data-g]');
+    if (r){ keepChoice.set(r.dataset.g, r.value); renderDups(); }
+  });
+  $("#main").addEventListener("input", e => {
+    if (e.target.id === "dupSearch"){ dupQuery = e.target.value; renderDups(); }
+  });
+  $("#main").addEventListener("click", async e => {
+    const d = e.target.closest("[data-dact]"); if (d){ handleDup(d); return; }
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const c = contacts.find(x => x.id === selectedId);
+    switch (b.dataset.act){
+      case "add": openEdit(null); break;
+      case "import": openImport(); break;
+      case "back": selectedId = null; render(); break;
+      case "edit": if (c) openEdit(c); break;
+      case "delete": if (c) confirmDelete(c); break;
+      case "export1": if (c) openExport([c], fullName(c), true); break;
+      case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); render(); await persist(c); } break;
+      case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", createdAt: now, updatedAt: now }); contacts.push(d); selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
+    }
+  });
+  document.addEventListener("keydown", e => {
+    if (document.querySelector(".scrim.open") || /INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+    if (e.key === "/"){ e.preventDefault(); $("#search").focus(); }
+    if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey){ e.preventDefault(); openEdit(null); }
+  });
+
+  initStorage();
+})();
+</script>
+</body>
+</html>
