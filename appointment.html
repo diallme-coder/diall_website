@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Request an appointment</title>
+<meta name="description" content="Request an appointment and I'll get back to you to confirm.">
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1b1f24; --muted: #5f6b7a;
+    --line: #d9dee5; --accent: #2563eb; --accent-ink: #ffffff; --ok: #15803d; --err: #b91c1c;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --card: #181c22; --text: #e8ecf1; --muted: #9aa5b3;
+            --line: #2b323c; --accent: #4f8cff; --ok: #4ade80; --err: #f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 18px 48px; }
+  header h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  header p { margin: 0 0 22px; color: var(--muted); }
+  form, .done { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+                padding: 22px 20px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 18px; }
+  legend { font-weight: 600; margin-bottom: 10px; padding: 0; }
+  label { display: block; font-size: .92rem; font-weight: 500; margin: 0 0 5px; }
+  .field { margin-bottom: 14px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 420px) { .row { grid-template-columns: 1fr; } }
+  input, select, textarea {
+    width: 100%; font: inherit; color: inherit; background: transparent;
+    border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-height: 46px;
+  }
+  textarea { min-height: 110px; resize: vertical; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent);
+  }
+  input:user-invalid, select:user-invalid, textarea:user-invalid { border-color: var(--err); }
+  .opt { color: var(--muted); font-weight: 400; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choices label { display: inline-flex; align-items: center; gap: 7px; font-weight: 400;
+                   border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; margin: 0; cursor: pointer; }
+  .choices input { width: auto; min-height: 0; margin: 0; accent-color: var(--accent); }
+  .choices label:has(input:checked) { border-color: var(--accent); }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  button { width: 100%; font: inherit; font-weight: 600; border: 0; border-radius: 10px;
+           background: var(--accent); color: var(--accent-ink); padding: 13px; min-height: 48px; cursor: pointer; }
+  button[disabled] { opacity: .6; cursor: progress; }
+  .note { font-size: .85rem; color: var(--muted); margin: 12px 0 0; text-align: center; }
+  .status { margin: 12px 0 0; font-size: .95rem; }
+  .status.err { color: var(--err); }
+  .status a { color: var(--accent); }
+  .done { text-align: center; }
+  .done h2 { margin: 6px 0 6px; color: var(--ok); }
+  .done p { color: var(--muted); margin: 0 0 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Request an appointment</h1>
+    <p>Pick a time that suits you and I'll get back to you to confirm.</p>
+  </header>
+
+  <form id="form" novalidate>
+    <fieldset>
+      <legend>Your details</legend>
+      <div class="field">
+        <label for="name">Full name</label>
+        <input id="name" name="name" autocomplete="name" required>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" required>
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="opt">(optional)</span></label>
+          <input id="email" name="email" type="email" autocomplete="email">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Appointment</legend>
+      <div class="field">
+        <label for="reason">What is it about?</label>
+        <select id="reason" name="reason" required>
+          <option value="">Choose one…</option>
+          <option>Meeting / consultation</option>
+          <option>Phone or video call</option>
+          <option>Business enquiry</option>
+          <option>Personal</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="date">Preferred date</label>
+          <input id="date" name="preferred_date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="time">Preferred time</label>
+          <input id="time" name="preferred_time" type="time" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="alt">Another time that works <span class="opt">(optional)</span></label>
+        <input id="alt" name="alternative_time" placeholder="e.g. Tuesday afternoon">
+      </div>
+      <div class="field">
+        <span id="how-label" style="display:block;font-size:.92rem;font-weight:500;margin-bottom:5px">How should we meet?</span>
+        <div class="choices" role="radiogroup" aria-labelledby="how-label">
+          <label><input type="radio" name="format" value="In person" checked> In person</label>
+          <label><input type="radio" name="format" value="Phone call"> Phone</label>
+          <label><input type="radio" name="format" value="Video call"> Video</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="message">Message <span class="opt">(optional)</span></label>
+        <textarea id="message" name="message" placeholder="Anything I should know beforehand"></textarea>
+      </div>
+    </fieldset>
+
+    <!-- spam trap: real people never see or fill this -->
+    <div class="hp" aria-hidden="true">
+      <label for="_honey">Leave empty</label>
+      <input id="_honey" name="_honey" tabindex="-1" autocomplete="off">
+    </div>
+
+    <button id="submit" type="submit">Send request</button>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p class="note">Your details are only used to arrange this appointment.</p>
+  </form>
+
+  <div id="done" class="done" hidden>
+    <h2>Request sent ✓</h2>
+    <p>Thanks — I'll be in touch soon to confirm your appointment.</p>
+  </div>
+</main>
+
+<script>
+  // Requests are delivered by email through FormSubmit (formsubmit.co).
+  // After activating, you can replace the address below with the random
+  // alias FormSubmit gives you, so your email isn't visible in the page source.
+  const INBOX = "diallohella@gmail.com";
+
+  const form = document.getElementById("form");
+  const btn = document.getElementById("submit");
+  const statusEl = document.getElementById("status");
+  const dateEl = document.getElementById("date");
+
+  // No appointments in the past
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  dateEl.min = today.toISOString().slice(0, 10);
+
+  function mailtoFallback(data) {
+    const lines = Object.entries(data)
+      .filter(([k, v]) => !k.startsWith("_") && v)
+      .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`);
+    return "mailto:" + INBOX + "?subject=" + encodeURIComponent("Appointment request from " + data.name)
+      + "&body=" + encodeURIComponent(lines.join("\n"));
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    statusEl.className = "status";
+    statusEl.textContent = "";
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    const data = Object.fromEntries(new FormData(form));
+    if (data._honey) return; // bot
+
+    const payload = {
+      ...data,
+      _subject: `Appointment request: ${data.name} — ${data.preferred_date} ${data.preferred_time}`,
+      _template: "table",
+      _captcha: "false"
+    };
+    if (data.email) payload._replyto = data.email;
+
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    try {
+      const res = await fetch("https://formsubmit.co/ajax/" + INBOX, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || String(out.success) === "false") throw new Error(out.message || "Send failed");
+      form.hidden = true;
+      document.getElementById("done").hidden = false;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      statusEl.className = "status err";
+      statusEl.innerHTML = 'Sorry, that didn\'t go through. <a id="mailto">Send it by email instead</a>.';
+      document.getElementById("mailto").href = mailtoFallback(data);
+      btn.disabled = false;
+      btn.textContent = "Send request";
+    }
+  });
+</script>
+</body>
+</html>

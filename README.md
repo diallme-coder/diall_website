@@ -29,6 +29,9 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 - **Gmail & Google Calendar sync** (when hosted on Claude, using the viewer's own connectors): emails and meetings from the last year are logged automatically
 - Responsive layout for desktop and mobile, light and dark mode
 
+## Appointment requests
+`appointment.html` is a public form people reach by scanning `appointment-qr-card.png` (or `appointment-qr.svg`). Requests are emailed to you via FormSubmit; the first request triggers a one-time activation email from FormSubmit that must be confirmed.
+
 ## Storage
 Contacts are saved in the browser's `localStorage`. When hosted as a Claude artifact, they are saved privately to the viewer's Claude account instead.
 
