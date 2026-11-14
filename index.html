@@ -161,6 +161,28 @@
   .intros{font-size:13px;margin-top:10px}
   .intros a,.row .v a[data-goto]{color:var(--accent);text-decoration:none}
   @media (max-width:560px){ .meter{width:80px} .logform input[name=note]{min-width:100%} }
+  /* scan tab */
+  .scancard .scanbody{padding:14px 16px}
+  .scancard .scanbody p{margin:0 0 10px}
+  .scancard.ask{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .scancard .q{font-size:15px}
+  .row-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .howto{margin-top:12px;font-size:13px}
+  .howto summary{cursor:pointer;color:var(--accent);font-weight:500}
+  .howto .steps{display:grid;gap:8px;margin-top:8px;padding:10px 12px;background:var(--bg);border-radius:10px}
+  .scanbody a{color:var(--accent);text-decoration:none}
+  .picklist{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .pickhead{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--line);flex-wrap:wrap;position:sticky;top:0;z-index:1}
+  .pickhead .n{font-size:12px;color:var(--muted)}
+  .pickrows{max-height:420px;overflow:auto}
+  .pick{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+  .pick:last-child{border-bottom:0}
+  .pick:hover{background:var(--bg)}
+  .pick.dim{opacity:.55;cursor:default}
+  .pick .meta{flex:1;min-width:0}.pick .nm{font-weight:600}.pick .sub{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pick .avatar{width:32px;height:32px;font-size:12px}
+  @media (max-width:480px){ #storeTxt{display:none} }
+  @media (max-width:480px){ .bottomnav{padding:0 2px env(safe-area-inset-bottom)} .bottomnav .ic{width:44px} .bottomnav button{font-size:11px} }
   /* bottom navigation */
   :root{--nav-h:64px}
   .app{height:calc(100vh - var(--nav-h) - env(safe-area-inset-bottom));height:calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom))}
@@ -242,6 +264,10 @@
   <button data-view="contacts" aria-label="Contacts">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
     <span>Contacts</span>
+  </button>
+  <button data-view="scan" aria-label="Scan contacts">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="10" r="3"/><path d="M7 17c.8-2 2.7-3 5-3s4.2 1 5 3"/></svg></span>
+    <span>Scan</span>
   </button>
   <button data-view="reminders" aria-label="Reminders">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="badge" id="badgeRem"></span></span>
@@ -750,7 +776,7 @@
 
   // ---------- views & routing ----------
   let view = "contacts";
-  const HASH = { "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
+  const HASH = { "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
   function viewFromHash(){ const h = location.hash.slice(1); return Object.keys(HASH).find(k => HASH[k] === h) || "contacts"; }
   function setView(v){
     view = v;
@@ -771,7 +797,7 @@
   function render(){
     renderFilters(); renderList();
     $("#app").classList.toggle("dupview", view !== "contacts");
-    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else renderDups();
+    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else renderDups();
     $("#contactNames").innerHTML = sorted(contacts).map(c => `<option value="${esc(fullName(c))}">`).join("");
     renderBadges();
   }
@@ -1539,6 +1565,250 @@ address = one line. Do not invent anything that is not visible on the card. If t
     }).catch(()=>{});
     claude.use("mcp").then(m => { if (m){ mcp = m; render(); } }).catch(()=>{});
   }
+
+  // ---------- Scan tab: device address book + (optional) email ----------
+  const scan = {
+    device: null,          // [{c, exists}] contacts found on the device / in an address-book file
+    deviceSel: new Set(),
+    deviceSrc: "",
+    askMail: false,        // show the "also scan your email?" question
+    mail: null,            // {status:"loading"|"done"|"error", items:[], progress, error, skipped, threads}
+    mailSel: new Set(),
+    mailDeclined: false,
+  };
+  const pickerSupported = () => "contacts" in navigator && "ContactsManager" in window && typeof navigator.contacts.select === "function";
+  const existingKeys = () => {
+    const emails = new Set(contacts.map(c => String(c.email||"").trim().toLowerCase()).filter(Boolean));
+    const phones = new Set(contacts.map(phoneKey).filter(Boolean));
+    const names = new Set(contacts.map(nameKey).filter(Boolean));
+    return c => (c.email && emails.has(c.email.trim().toLowerCase())) || (phoneKey(c) && phones.has(phoneKey(c))) || (!c.email && !phoneKey(c) && nameKey(c) && names.has(nameKey(c)));
+  };
+  function setDeviceResults(list, src){
+    const exists = existingKeys();
+    const seen = new Set();
+    scan.device = list.map(c => normalize({ ...c, id: undefined }))
+      .filter(c => c.firstName || c.lastName || c.company || c.phone || c.email)
+      .filter(c => { const k = dupKey(c); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map(c => ({ c, exists: !!exists(c) }));
+    scan.deviceSel = new Set(scan.device.map((x, i) => x.exists ? -1 : i).filter(i => i >= 0));
+    scan.deviceSrc = src;
+    render();
+  }
+  function pickRows(kind, items, sel){
+    return items.map((x, i) => {
+      const c = x.c, sub = kind === "mail"
+        ? `${esc(c.email)} · ${x.count} conversation${x.count===1?"":"s"} · last ${agoText(x.last)}`
+        : esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No phone or email");
+      return `<label class="pick ${x.exists ? "dim" : ""}">
+        <input type="checkbox" data-pick="${kind}" value="${i}" ${sel.has(i) ? "checked" : ""} ${x.exists ? "disabled" : ""}>
+        <div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>
+        <div class="meta"><div class="nm">${esc(fullName(c))}</div><div class="sub">${sub}</div></div>
+        ${x.exists ? `<span class="pill ${x.added ? "s-strong" : ""}">${x.added ? "Added ✓" : "Already saved"}</span>` : ""}</label>`;
+    }).join("");
+  }
+  function pickBlock(kind, items, sel, title){
+    const avail = items.filter(x => !x.exists).length;
+    return `<div class="picklist">
+      <div class="pickhead"><label class="keep"><input type="checkbox" data-pickall="${kind}" ${sel.size && sel.size === avail ? "checked" : ""} ${avail ? "" : "disabled"}> Select all</label>
+        <span class="n">${title}</span><span class="spacer"></span>
+        <button class="btn primary sm" data-sact="add-${kind}" ${sel.size ? "" : "disabled"}>Add ${sel.size} contact${sel.size===1?"":"s"}</button></div>
+      <div class="pickrows">${items.length ? pickRows(kind, items, sel) : `<div class="dupitem"><div class="meta sub">Nothing found.</div></div>`}</div></div>`;
+  }
+
+  function renderScan(){
+    $("#app").classList.remove("viewing");
+    const ua = navigator.userAgent, isIOS = /iPhone|iPad|iPod/.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1), isAndroid = /Android/.test(ua);
+    let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Scan</h2>
+      <p>Bring in people from your phone's address book, a business card or your email.</p></div></div>`;
+
+    // --- device address book ---
+    h += `<div class="dupgroup scancard"><div class="gh"><span>📱</span><span class="key">Contacts on this device</span></div><div class="scanbody">`;
+    if (pickerSupported()){
+      h += `<p>Pick the contacts you want from your phone's address book. Nothing is shared until you choose.</p>
+        <div class="row-btns"><button class="btn primary" data-sact="picker">📇 Choose from my contacts</button>
+        <button class="btn" data-sact="vcf">Import an address-book file</button></div>`;
+    } else {
+      h += `<p>This browser can't open your phone's address book directly${isIOS ? " (iPhone and iPad don't allow it)" : ""}. Export it as a vCard file instead — it takes a few seconds — then choose the file here:</p>
+        <div class="row-btns"><button class="btn primary" data-sact="vcf">📂 Choose address-book file (.vcf)</button></div>
+        <details class="howto" ${isIOS || isAndroid ? "open" : ""}><summary>How do I export my contacts?</summary>
+          <div class="steps">
+            <div ${isAndroid ? 'style="display:none"' : ""}><b>iPhone / iPad:</b> open <i>Contacts</i> → tap <i>Lists</i> (top-left) → touch and hold <i>All Contacts</i> → <i>Export</i> → <i>Save to Files</i>. Then come back and choose that file.</div>
+            <div ${isIOS ? 'style="display:none"' : ""}><b>Android:</b> open <i>Contacts</i> → <i>Fix &amp; manage</i> (or ⋮ menu → <i>Settings</i>) → <i>Export to file</i> → save the .vcf, then choose it here.</div>
+            <div><b>Google Contacts:</b> contacts.google.com → <i>Export</i> → <i>vCard</i>.</div>
+            <div><b>Mac:</b> Contacts app → select all (⌘A) → <i>File</i> → <i>Export</i> → <i>Export vCard</i>.</div>
+          </div></details>`;
+    }
+    if (sampleFn) h += `<p class="note" style="margin-top:12px">Have a paper card? <a href="#" data-sact="card">📷 Scan a business card</a></p>`;
+    if (scan.device) h += `<div style="margin-top:14px">${pickBlock("device", scan.device, scan.deviceSel, `${scan.device.length} found${scan.deviceSrc ? " in " + esc(scan.deviceSrc) : ""}`)}</div>`;
+    h += `</div></div>`;
+
+    // --- email ---
+    const m = scan.mail;
+    h += `<div class="dupgroup scancard ${scan.askMail && !m ? "ask" : ""}" id="mailCard"><div class="gh"><span>✉️</span><span class="key">People from your email</span></div><div class="scanbody">`;
+    if (!mcp){
+      h += `<p class="muted">Email scanning works when you open this page on claude.ai with Gmail connected.</p>`;
+    } else if (!m){
+      h += `<p class="q"><b>${scan.askMail ? "Done with your phone contacts. " : ""}Can I also scan your email?</b></p>
+        <p>I'll look through the emails you've <b>sent in the past year</b> (only who they were to and from — not the messages themselves) and suggest people you write to who aren't in your contacts yet. You choose who to add.</p>
+        ${scan.mailDeclined ? `<p class="note">Okay — I won't scan your email. You can change your mind any time.</p>` : ""}
+        <div class="row-btns"><button class="btn primary" data-sact="mail-yes">Yes, scan my email</button>${scan.mailDeclined ? "" : `<button class="btn" data-sact="mail-no">No thanks</button>`}</div>`;
+    } else if (m.status === "loading"){
+      h += `<p>⏳ ${esc(m.progress || "Scanning your sent email…")}</p><div class="row-btns"><button class="btn" data-sact="mail-stop">Stop</button></div>`;
+    } else if (m.status === "error"){
+      h += `<p style="color:var(--danger)">${esc(m.error)}</p><div class="row-btns"><button class="btn" data-sact="mail-yes">Try again</button></div>`;
+    } else {
+      h += `<p class="note" style="margin-top:0">Checked ${m.threads} sent conversation${m.threads===1?"":"s"} from the past year${m.skipped ? ` · ${m.skipped} ${m.skipped===1?"person":"people"} already in your contacts ${m.skipped===1?"was":"were"} left out` : ""}.${m.stopped ? " (Stopped early.)" : ""}</p>
+        ${pickBlock("mail", m.items, scan.mailSel, `${m.items.length} people you email`)}
+        <div class="row-btns" style="margin-top:10px"><button class="btn sm" data-sact="mail-yes">⟳ Scan again</button></div>`;
+    }
+    h += `</div></div></div>`;
+    const keep = [...document.querySelectorAll("#main .pickrows")].map(el => el.scrollTop), top = $("#main").scrollTop;
+    $("#main").innerHTML = h;
+    document.querySelectorAll("#main .pickrows").forEach((el, i) => { el.scrollTop = keep[i] || 0; });
+    $("#main").scrollTop = top;
+  }
+
+  // parse "Name <a@b.c>", "a@b.c", arrays, or {email,name} objects into [{email,name}]
+  function parseAddrs(v, names){
+    if (!v) return [];
+    if (Array.isArray(v)) return v.flatMap(x => parseAddrs(x, names));
+    if (typeof v === "object"){ const e = v.email || v.address || v.emailAddress; return e ? [{ email: String(e).toLowerCase(), name: String(v.name || v.displayName || "") }] : []; }
+    return String(v).split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(part => {
+      const mm = part.match(/^\s*"?([^"<]*?)"?\s*<([^>\s]+@[^>\s]+)>/);
+      let email = "", name = "";
+      if (mm){ name = mm[1].trim(); email = mm[2]; } else { const e = part.match(/[^\s<>"',;]+@[^\s<>"',;]+\.[^\s<>"',;]+/); if (e) email = e[0]; }
+      email = email.toLowerCase();
+      if (!name && names){ if (Array.isArray(names)) { const f = names.find(n => String(n.address || n.email || "").toLowerCase() === email); name = f ? String(f.displayName || f.name || "") : ""; } else if (typeof names === "object") name = String(names[email] || names[Object.keys(names).find(k => k.toLowerCase() === email)] || ""); }
+      return email ? { email, name } : null;
+    }).filter(Boolean);
+  }
+  const AUTOMATED = /(^|[._+-])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|mailer-daemon|postmaster|bounces?|automated|alerts?)([._+-]|@)/i;
+  function nameFromEmail(email){
+    const local = email.split("@")[0].replace(/[0-9]+/g, " ").replace(/[._-]+/g, " ").trim();
+    return local.split(/\s+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+  }
+  let mailCtl = null;
+  async function scanMail(){
+    if (!mcp) return;
+    mailCtl = { stop: false };
+    const my = mailCtl;
+    scan.mail = { status: "loading", progress: "Scanning your sent email…", items: [], threads: 0 };
+    scan.mailSel = new Set(); scan.askMail = false; render();
+    const people = new Map(), self = new Set();
+    let pageToken = "", threads = 0;
+    try {
+      for (let page = 0; page < 6 && !my.stop; page++){
+        const input = { query: "in:sent newer_than:1y", pageSize: 50, view: "THREAD_VIEW_METADATA_ONLY" };
+        if (pageToken) input.pageToken = pageToken;
+        const r = await mcp.callTool("Gmail", "search_threads", input, { cache: false });
+        if (my.stop || scan.mail?.status !== "loading") return;
+        const pl = r.payload || {};
+        for (const t of pl.threads || []){
+          threads++;
+          const inThread = new Set();
+          for (const m of t.messages || [t]){
+            const names = m.addressDisplayNames || t.addressDisplayNames;
+            const from = parseAddrs(m.sender || m.from, names);
+            const sent = (m.labelIds || []).includes("SENT");
+            if (sent) from.forEach(a => self.add(a.email));
+            const others = [...(sent ? [] : from), ...parseAddrs(m.toRecipients || m.to, names), ...parseAddrs(m.ccRecipients || m.cc, names)];
+            const d = toDay(m.date || t.date);
+            for (const a of others){
+              const p = people.get(a.email) || { email: a.email, name: "", threads: new Set(), last: "" };
+              if (a.name && a.name.includes(" ") && !a.name.includes("@") || (!p.name && a.name && !a.name.includes("@"))) p.name = a.name;
+              p.threads.add(t.id || threads); if (d && d > p.last) p.last = d;
+              people.set(a.email, p); inThread.add(a.email);
+            }
+          }
+        }
+        scan.mail.progress = `Scanning your sent email… ${threads} conversations checked`;
+        render();
+        pageToken = pl.nextPageToken || "";
+        if (!pageToken) break;
+      }
+      const have = new Set(contacts.map(c => String(c.email||"").trim().toLowerCase()).filter(Boolean));
+      let skipped = 0;
+      const items = [];
+      for (const p of people.values()){
+        if (self.has(p.email) || AUTOMATED.test(p.email)) continue;
+        if (have.has(p.email)){ skipped++; continue; }
+        const nm = (p.name || nameFromEmail(p.email)).replace(/^["']|["']$/g, "").trim();
+        const parts = nm.includes(",") ? nm.split(",").map(s => s.trim()).reverse() : [nm];
+        const sp = splitName(parts.join(" "));
+        items.push({ c: normalize({ ...sp, email: p.email, tags: "Gmail" }), count: p.threads.size, last: p.last || today(), exists: false });
+      }
+      items.sort((a,b) => b.count - a.count || b.last.localeCompare(a.last));
+      scan.mail = { status: "done", items: items.slice(0, 300), threads, skipped, stopped: my.stop };
+      scan.mailSel = new Set(items.slice(0, 300).map((x, i) => x.count >= 2 ? i : -1).filter(i => i >= 0));
+    } catch(e){
+      if (my.stop) return;
+      scan.mail = { status: "error", error: e && e.code === "tool_error" && /permission/i.test(e.message || "") ? "Gmail is connected but missing a permission. Reconnect Gmail in claude.ai Settings → Connectors and allow everything it asks for, then try again." : syncErrText("Gmail", e) };
+    }
+    render();
+  }
+
+  async function addPicked(kind){
+    const list = kind === "device" ? scan.device : scan.mail?.items, sel = kind === "device" ? scan.deviceSel : scan.mailSel;
+    if (!list || !sel.size) return;
+    const now = new Date().toISOString();
+    const toAdd = [...sel].sort((a,b) => a-b).map(i => list[i]).filter(x => x && !x.exists).map(x => normalize({ ...x.c, id: undefined, createdAt: now, updatedAt: now }));
+    contacts = contacts.concat(toAdd);
+    list.forEach((x, i) => { if (sel.has(i)){ x.exists = true; x.added = true; } });
+    sel.clear();
+    if (kind === "device" && mcp && !scan.mail && !scan.mailDeclined) scan.askMail = true;
+    render();
+    if (backend === "db"){ for (const c of toAdd){ try { await dbCol.doc(c.id).set(c); } catch(e){ handleDbError(e); if (backend !== "db" || e?.code === "quota_exceeded") break; } } if (backend === "local") saveLocal(); }
+    else saveLocal();
+    toast(`Added ${toAdd.length} contact${toAdd.length===1?"":"s"}`);
+    if (scan.askMail) setTimeout(() => $("#mailCard")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  }
+
+  const vcfInput = document.createElement("input");
+  vcfInput.type = "file"; vcfInput.accept = ".vcf,.vcard,.csv,text/vcard,text/x-vcard,text/csv"; vcfInput.hidden = true;
+  document.body.appendChild(vcfInput);
+  vcfInput.addEventListener("change", () => {
+    const f = vcfInput.files[0]; if (!f) return;
+    if (f.size > 20 * 1024 * 1024){ toast("That file is over 20 MB"); return; }
+    const r = new FileReader();
+    r.onload = () => { try { setDeviceResults(parseAny(String(r.result), f.name), f.name); } catch(e){ toast(e.message || "Couldn't read that file"); } };
+    r.readAsText(f);
+  });
+
+  $("#main").addEventListener("click", async e => {
+    const b = e.target.closest("[data-sact]"); if (!b || view !== "scan") return;
+    e.preventDefault();
+    const a = b.dataset.sact;
+    if (a === "vcf"){ vcfInput.value = ""; vcfInput.click(); }
+    else if (a === "card"){ $("#cardInput").value = ""; $("#cardInput").click(); }
+    else if (a === "picker"){
+      try {
+        const props = await navigator.contacts.getProperties().catch(() => ["name","email","tel"]);
+        const res = await navigator.contacts.select(props.filter(p => ["name","email","tel","address"].includes(p)), { multiple: true });
+        if (!res || !res.length) return;
+        setDeviceResults(res.map(r => {
+          const ad = (r.address || [])[0];
+          const address = ad ? [...(ad.addressLine || []), ad.city, ad.region, ad.postalCode, ad.country].filter(Boolean).join(", ") : "";
+          return { ...splitName((r.name || [])[0] || ""), email: (r.email || [])[0] || "", phone: (r.tel || [])[0] || "", address };
+        }), "your device");
+      } catch(err){ toast("Couldn't open your contacts here — use an address-book file instead."); }
+    }
+    else if (a === "add-device") addPicked("device");
+    else if (a === "add-mail") addPicked("mail");
+    else if (a === "mail-yes") scanMail();
+    else if (a === "mail-no"){ scan.mailDeclined = true; scan.askMail = false; render(); }
+    else if (a === "mail-stop"){ if (mailCtl) mailCtl.stop = true; const m = scan.mail; scan.mail = null; render(); if (m) toast("Email scan stopped"); }
+  });
+  $("#main").addEventListener("change", e => {
+    if (view !== "scan") return;
+    const p = e.target.closest("[data-pick]");
+    if (p){ const sel = p.dataset.pick === "device" ? scan.deviceSel : scan.mailSel; p.checked ? sel.add(+p.value) : sel.delete(+p.value); render(); return; }
+    const all = e.target.closest("[data-pickall]");
+    if (all){
+      const kind = all.dataset.pickall, list = kind === "device" ? scan.device : scan.mail.items, sel = kind === "device" ? scan.deviceSel : scan.mailSel;
+      sel.clear(); if (all.checked) list.forEach((x, i) => { if (!x.exists) sel.add(i); });
+      render();
+    }
+  });
 
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
