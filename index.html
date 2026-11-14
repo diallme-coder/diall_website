@@ -120,6 +120,47 @@
   @media (max-width:560px){ .namegrid{grid-template-columns:1fr} .hint{display:none} .dhead{align-items:flex-start} }
   @media (hover:none){ .pen{opacity:.6} }
   .back{display:none}
+  /* relationship tracking */
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted);white-space:nowrap;font-weight:500}
+  .pill.soon{background:#fff4e0;border-color:#f3c77a;color:#8a5a00}
+  .pill.due{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+  .pill.src{font-size:11px;padding:0 7px}
+  .pill.s-strong{background:#e3f6ec;border-color:#7fcfa4;color:#13703f}
+  .pill.s-good{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .pill.s-fading{background:#fff4e0;border-color:#f3c77a;color:#8a5a00}
+  .pill.s-cold{background:var(--bg);color:var(--muted)}
+  @media (prefers-color-scheme: dark){ .pill.soon,.pill.s-fading{background:#3a2e14;border-color:#7a5d1d;color:#f3c77a} .pill.s-strong{background:#123222;border-color:#2c7a50;color:#7fdca8} }
+  .activity{padding:16px 18px}
+  .acthead{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .acthead h3{margin:0;font-size:15px;flex:1}
+  .meter{width:120px;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+  .meter span{display:block;height:100%;border-radius:4px}
+  .meter .s-strong{background:#2fa56a}.meter .s-good{background:var(--accent)}.meter .s-fading{background:#e8a317}.meter .s-cold{background:#9aa3b0}
+  .mlabel{font-size:12px;color:var(--muted);min-width:90px}
+  .statline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:12px;color:var(--muted)}
+  .statline b{color:var(--ink);font-weight:600}
+  .statline label{display:flex;align-items:center;gap:6px}
+  select,.sel{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+  .field select{padding:9px 11px;border-radius:9px}
+  .card.editing select{width:100%;padding:8px 10px}
+  .logbtns{display:flex;gap:6px;flex-wrap:wrap}
+  .logform{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px;background:var(--bg);border-radius:10px;border:1px solid var(--line)}
+  .logform[hidden]{display:none}
+  .logform input[name=note]{flex:1;min-width:180px}
+  .logform input,.logform select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+  .timeline{list-style:none;margin:12px 0 4px;padding:0;border-top:1px solid var(--line)}
+  .timeline li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+  .timeline li:last-child{border-bottom:0}
+  .ti{width:30px;height:30px;border-radius:50%;background:var(--bg);display:grid;place-items:center;flex:none;font-size:14px}
+  .tb{flex:1;min-width:0;font-size:13px}
+  .tn{color:var(--ink);margin-top:2px;white-space:pre-wrap;word-break:break-word}
+  .muted{color:var(--muted)}
+  .x{border:0;background:none;color:var(--muted);cursor:pointer;padding:4px 6px;border-radius:6px;opacity:.5}
+  .x:hover{opacity:1;background:var(--danger-soft);color:var(--danger)}
+  .intros{font-size:13px;margin-top:10px}
+  .intros a,.row .v a[data-goto]{color:var(--accent);text-decoration:none}
+  @media (max-width:560px){ .meter{width:80px} .logform input[name=note]{min-width:100%} }
   /* bottom navigation */
   :root{--nav-h:64px}
   .app{height:calc(100vh - var(--nav-h) - env(safe-area-inset-bottom));height:calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom))}
@@ -181,6 +222,7 @@
     <h1>Contacts</h1>
     <div class="store"><span class="dot" id="storeDot"></span><span id="storeTxt">Loading…</span></div>
     <div class="spacer"></div>
+    <button class="btn" id="scanBtn" title="Scan a business card" hidden>📷 <span class="lbl">Scan card</span></button>
     <button class="btn" id="importBtn" title="Import contacts">⤓ <span class="lbl">Import</span></button>
     <button class="btn" id="exportAllBtn" title="Export all contacts">⤒ <span class="lbl">Export all</span></button>
     <button class="btn primary" id="addBtn">＋ <span class="lbl">New contact</span></button>
@@ -200,6 +242,10 @@
   <button data-view="contacts" aria-label="Contacts">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
     <span>Contacts</span>
+  </button>
+  <button data-view="reminders" aria-label="Reminders">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="badge" id="badgeRem"></span></span>
+    <span>Reminders</span>
   </button>
   <button data-view="dup-phone" aria-label="Duplicate numbers">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="badge" id="badgePhone"></span></span>
@@ -225,6 +271,10 @@
         <div class="field"><label for="f_jobTitle">Job title</label><input id="f_jobTitle" name="jobTitle"></div>
         <div class="field full"><label for="f_address">Address</label><input id="f_address" name="address"></div>
         <div class="field"><label for="f_birthday">Birthday</label><input id="f_birthday" name="birthday" type="date"></div>
+        <div class="field"><label for="f_anniversary">Anniversary</label><input id="f_anniversary" name="anniversary" type="date"></div>
+        <div class="field"><label for="f_howMet">How you met</label><input id="f_howMet" name="howMet" placeholder="e.g. Web Summit 2026"></div>
+        <div class="field"><label for="f_introducedBy">Introduced by</label><input id="f_introducedBy" name="introducedBy" list="contactNames" autocomplete="off"></div>
+        <div class="field"><label for="f_keepInTouch">Keep in touch</label><select id="f_keepInTouch" name="keepInTouch" class="sel"></select></div>
         <div class="field"><label for="f_website">Website</label><input id="f_website" name="website" placeholder="https://"></div>
         <div class="field full"><label for="f_tags">Tags <span style="font-weight:400">(comma separated)</span></label><input id="f_tags" name="tags" placeholder="family, work"></div>
         <div class="field full"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes" rows="3"></textarea></div>
@@ -286,11 +336,28 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<datalist id="contactNames"></datalist>
+<input type="file" id="cardInput" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" hidden>
+
+<!-- Scan card modal -->
+<div class="scrim" id="scanScrim">
+  <div class="modal" style="max-width:460px">
+    <header><h3>Scan business card</h3><button type="button" class="btn ghost" data-close>✕</button></header>
+    <div class="body" style="text-align:center">
+      <img id="scanImg" alt="Business card" style="max-width:100%;max-height:240px;border-radius:10px;border:1px solid var(--line)">
+      <p id="scanStatus" style="margin:14px 0 0;color:var(--muted)">Reading the card…</p>
+    </div>
+    <footer><button type="button" class="btn" id="scanStop">Stop</button><button type="button" class="btn primary" id="scanRetry" hidden>Choose another photo</button></footer>
+  </div>
+</div>
 
 <script>
 (() => {
   // ---------- state ----------
-  const FIELDS = ["firstName","lastName","phone","email","company","jobTitle","address","birthday","website","tags","notes","favorite"];
+  const FIELDS = ["firstName","lastName","phone","email","company","jobTitle","address","birthday","anniversary","website","howMet","introducedBy","keepInTouch","tags","notes","favorite"];
+  const ITYPES = { call:{label:"Call",icon:"📞"}, email:{label:"Email",icon:"✉️"}, meeting:{label:"Meeting",icon:"🤝"}, message:{label:"Message",icon:"💬"}, other:{label:"Note",icon:"📝"} };
+  const KIT = [["","Off"],["7","Every week"],["14","Every 2 weeks"],["30","Every month"],["60","Every 2 months"],["90","Every 3 months"],["180","Every 6 months"],["365","Every year"]];
+  const kitLabel = v => (KIT.find(k => k[0] === String(v||"")) || ["", v ? `Every ${v} days` : "Off"])[1];
   let contacts = [];         // array of contact objects
   let selectedId = null;
   let query = "";
@@ -327,6 +394,17 @@
       else if (f === "tags") c.tags = tagList(raw);
       else c[f] = raw[f] == null ? "" : String(raw[f]).trim();
     }
+    if (!/^\d{1,4}$/.test(c.keepInTouch)) c.keepInTouch = "";
+    c.interactions = (Array.isArray(raw.interactions) ? raw.interactions : [])
+      .filter(i => i && /^\d{4}-\d{2}-\d{2}/.test(String(i.date)))
+      .map(i => {
+        const o = { id: String(i.id || uid()), type: ITYPES[i.type] ? i.type : "other", date: String(i.date).slice(0,10), note: String(i.note || "").slice(0, 2000) };
+        if (i.source) o.source = String(i.source);
+        if (i.extId) o.extId = String(i.extId);
+        return o;
+      })
+      .sort((a,b) => b.date.localeCompare(a.date));
+    if (raw.syncedAt) c.syncedAt = String(raw.syncedAt);
     c.createdAt = raw.createdAt || new Date().toISOString();
     c.updatedAt = raw.updatedAt || c.createdAt;
     return c;
@@ -460,11 +538,13 @@
     const url = safeUrl(c.website);
     const role = [c.jobTitle, c.company].filter(Boolean).join(" · ");
     const missing = EDIT_ROWS.filter(([k]) => k === "tags" ? !tagList(c).length : !c[k]);
+    const st = strength(c), last = lastContacted(c);
     $("#main").innerHTML = `<div class="detail">
       <button class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
       <div class="dhead">
         <div class="avatar lg" style="background:${colorFor(c)}">${esc(initials(c))}</div>
-        <div class="editable-name" data-edit="firstName" title="Click to edit"><h2>${esc(fullName(c))} <span class="pen" aria-hidden="true">✎</span></h2>${role?`<div class="role">${esc(role)}</div>`:""}</div>
+        <div class="editable-name" data-edit="firstName" title="Click to edit"><h2>${esc(fullName(c))} <span class="pen" aria-hidden="true">✎</span></h2>${role?`<div class="role">${esc(role)}</div>`:""}
+          <div class="pills">${st ? `<span class="pill s-${strengthClass(st)}" title="Relationship strength (0–100), from how often and how recently you've interacted">${strengthLabel(st)} · ${st}</span>` : ""}${last ? `<span class="pill">Last contacted ${agoText(last)}</span>` : `<span class="pill">Never contacted</span>`}</div></div>
       </div>
       <div class="actions">
         <button class="btn primary" data-act="edit">✎ Edit</button>
@@ -479,13 +559,17 @@
         ${row("Company", esc(c.company), "company")}
         ${row("Job title", esc(c.jobTitle), "jobTitle")}
         ${row("Address", esc(c.address), "address")}
-        ${row("Birthday", fmtDate(c.birthday), "birthday")}
+        ${row("Birthday", fmtDate(c.birthday) + occText(c.birthday, "turns"), "birthday")}
+        ${row("Anniversary", fmtDate(c.anniversary) + occText(c.anniversary, "years"), "anniversary")}
         ${row("Website", url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(c.website)}</a>` : esc(c.website), "website")}
+        ${row("How you met", esc(c.howMet), "howMet")}
+        ${row("Introduced by", introLink(c), "introducedBy")}
         ${row("Tags", tagList(c).map(t=>`<span class="tag">${esc(t)}</span>`).join(""), "tags")}
         ${row("Notes", esc(c.notes), "notes")}
         ${missing.length === EDIT_ROWS.length ? '<div class="row"><div class="k">Details</div><div class="v" style="color:var(--muted)">No details yet — add some below.</div></div>' : ""}
       </div>
-      ${missing.length ? `<div class="addchips">${missing.map(([k,label]) => `<button class="chip" data-edit="${k}">＋ ${label}</button>`).join("")}</div>` : ""}
+      ${missing.filter(([k]) => k !== "keepInTouch").length ? `<div class="addchips">${missing.filter(([k]) => k !== "keepInTouch").map(([k,label]) => `<button class="chip" data-edit="${k}">＋ ${label}</button>`).join("")}</div>` : ""}
+      ${activityCard(c)}
       <div class="stamp">Added ${new Date(c.createdAt).toLocaleString()}${c.updatedAt && c.updatedAt!==c.createdAt ? ` · Updated ${new Date(c.updatedAt).toLocaleString()}` : ""}</div>
     </div>`;
   }
@@ -494,7 +578,39 @@
   const phoneKey = c => { const d = String(c.phone||"").replace(/\D/g,""); if (d.length < 6) return ""; return d.length > 10 ? d.slice(-10) : d; };
   const nameKey = c => [c.firstName, c.lastName].join(" ").normalize("NFD").replace(/[̀-ͯ]/g,"")
       .toLowerCase().replace(/[^a-z0-9\s]/g," ").trim().split(/\s+/).filter(Boolean).sort().join(" ");
+  const nameTokens = c => [c.firstName, c.lastName].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase().replace(/[^a-z0-9\s]/g," ").trim().split(/\s+/).filter(Boolean);
+  // "J. Smith" ~ "John Smith": same last name, and first names equal or one is the other's initial
+  function namesCompatible(a, b){
+    const ta = nameTokens(a), tb = nameTokens(b);
+    if (!ta.length || !tb.length) return true;
+    if (ta[ta.length-1] !== tb[tb.length-1]) return false;
+    if (ta.length === 1 || tb.length === 1) return true;
+    const fa = ta[0], fb = tb[0];
+    return fa === fb || (fa.length === 1 && fb.startsWith(fa)) || (fb.length === 1 && fa.startsWith(fb));
+  }
+  function nameGroups(){
+    const parent = new Map(contacts.map(c => [c.id, c.id]));
+    const find = x => { while (parent.get(x) !== x){ parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+    const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(rb, ra); };
+    const byName = new Map(), byEmail = new Map(), viaEmail = new Set();
+    for (const c of contacts){
+      const k = nameKey(c); if (k){ if (byName.has(k)) union(byName.get(k), c.id); else byName.set(k, c.id); }
+      const e = String(c.email||"").trim().toLowerCase();
+      if (e){ if (!byEmail.has(e)) byEmail.set(e, []); byEmail.get(e).push(c); }
+    }
+    for (const list of byEmail.values())
+      for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++)
+        if (nameKey(list[i]) !== nameKey(list[j]) && namesCompatible(list[i], list[j])){ union(list[i].id, list[j].id); viaEmail.add(list[i].id); viaEmail.add(list[j].id); }
+    const groups = new Map();
+    for (const c of contacts){ const r = find(c.id); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c); }
+    return [...groups.values()].filter(v => v.length > 1).map(v => {
+      const items = [...v].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+      return { key: items.map(c => c.id).sort()[0], items, reason: items.some(c => viaEmail.has(c.id)) ? "Same email" : "Same name" };
+    }).sort((a,b) => b.items.length - a.items.length || fullName(a.items[0]).localeCompare(fullName(b.items[0])));
+  }
   function dupGroups(kind){
+    if (kind === "dup-name") return nameGroups();
     const fn = kind === "dup-phone" ? phoneKey : nameKey;
     const m = new Map();
     for (const c of contacts){ const k = fn(c); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(c); }
@@ -510,6 +626,8 @@
     const p = extra("dup-phone"), n = extra("dup-name");
     $("#badgePhone").textContent = p ? (p > 99 ? "99+" : p) : "";
     $("#badgeName").textContent = n ? (n > 99 ? "99+" : n) : "";
+    const r = reminderCount();
+    $("#badgeRem").textContent = r ? (r > 99 ? "99+" : r) : "";
     document.querySelectorAll("#bottomnav [data-view]").forEach(b => {
       const on = b.dataset.view === view; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false");
     });
@@ -525,7 +643,7 @@
     const title = isPhone ? "Duplicate numbers" : "Duplicate names";
     const sub = all.length
       ? `${all.length} group${all.length===1?"":"s"} · ${extra} extra contact${extra===1?"":"s"} can be merged`
-      : (isPhone ? "Contacts sharing the same phone number appear here." : "Contacts with the same first and last name appear here.");
+      : (isPhone ? "Contacts sharing the same phone number appear here." : "Contacts with the same name appear here — and look-alikes such as “J. Smith” and “John Smith” when their email matches.");
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>${title}</h2><p>${sub}</p></div>
       ${all.length > 1 ? `<button class="btn primary" data-dact="mergeAll">Merge all ${all.length} groups</button>` : ""}</div>`;
     if (!all.length){
@@ -542,7 +660,7 @@
       if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
       const label = isPhone ? (g.items[0].phone) : fullName(g.items[0]);
       h += `<div class="dupgroup"><div class="gh">
-        <span>${isPhone ? "📞" : "👤"}</span><span class="key">${esc(label)}</span><span class="n">${g.items.length} contacts</span>
+        <span>${isPhone ? "📞" : "👤"}</span><span class="key">${esc(label)}</span>${g.reason === "Same email" ? `<span class="pill" title="Names look alike and the email address matches">✉️ Same email</span>` : ""}<span class="n">${g.items.length} contacts</span>
         <button class="btn sm primary" data-dact="merge" data-g="${esc(gk)}">Merge into one</button></div>`;
       for (const c of g.items){
         h += `<div class="dupitem ${c.id===keepId?"kept":""}">
@@ -573,6 +691,8 @@
       }
       m.favorite = m.favorite || o.favorite;
       m.tags = [...new Set([...m.tags, ...tagList(o)])];
+      const seen = new Set((m.interactions||[]).map(i => i.extId || i.id));
+      m.interactions = [...(m.interactions||[]), ...(o.interactions||[]).filter(i => !seen.has(i.extId || i.id))];
       if (o.phone && phoneKey(o) !== phoneKey(m) && o.phone !== m.phone) extraNotes.push("Other phone: " + o.phone);
       if (o.email && o.email.toLowerCase() !== String(m.email).toLowerCase()) extraNotes.push("Other email: " + o.email);
       if (o.notes && !String(m.notes).includes(o.notes)) extraNotes.push(o.notes);
@@ -630,8 +750,8 @@
 
   // ---------- views & routing ----------
   let view = "contacts";
-  const HASH = { "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
-  function viewFromHash(){ const h = location.hash.slice(1); return h === HASH["dup-phone"] ? "dup-phone" : h === HASH["dup-name"] ? "dup-name" : "contacts"; }
+  const HASH = { "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
+  function viewFromHash(){ const h = location.hash.slice(1); return Object.keys(HASH).find(k => HASH[k] === h) || "contacts"; }
   function setView(v){
     view = v;
     const want = HASH[v] ? "#" + HASH[v] : "";
@@ -651,7 +771,8 @@
   function render(){
     renderFilters(); renderList();
     $("#app").classList.toggle("dupview", view !== "contacts");
-    if (view === "contacts") renderMain(); else renderDups();
+    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else renderDups();
+    $("#contactNames").innerHTML = sorted(contacts).map(c => `<option value="${esc(fullName(c))}">`).join("");
     renderBadges();
   }
 
@@ -669,15 +790,16 @@
   });
 
   // ----- edit -----
-  function openEdit(c){
+  function openEdit(c, prefill, title){
     editingId = c ? c.id : null;
-    $("#editTitle").textContent = c ? "Edit contact" : "New contact";
+    const src = c || prefill || null;
+    $("#editTitle").textContent = title || (c ? "Edit contact" : "New contact");
     $("#editErr").textContent = "";
     for (const f of FIELDS){
       const el = $("#f_"+f);
-      if (f === "favorite") el.checked = !!c?.favorite;
-      else if (f === "tags") el.value = c ? tagList(c).join(", ") : "";
-      else el.value = c?.[f] || "";
+      if (f === "favorite") el.checked = !!src?.favorite;
+      else if (f === "tags") el.value = src ? tagList(src).join(", ") : "";
+      else el.value = src?.[f] || "";
     }
     openModal("#editScrim");
     setTimeout(()=>$("#f_firstName").focus(), 30);
@@ -722,7 +844,9 @@
   let inlineFocus = null;      // field to focus when entering edit mode
   const EDIT_ROWS = [
     ["phone","Phone","tel"],["email","Email","email"],["company","Company","text"],["jobTitle","Job title","text"],
-    ["address","Address","text"],["birthday","Birthday","date"],["website","Website","url"],["tags","Tags","text"],["notes","Notes","textarea"]
+    ["address","Address","text"],["birthday","Birthday","date"],["anniversary","Anniversary","date"],["website","Website","url"],
+    ["howMet","How you met","text"],["introducedBy","Introduced by","text"],["keepInTouch","Keep in touch","select"],
+    ["tags","Tags","text"],["notes","Notes","textarea"]
   ];
   function startInlineEdit(field){
     inlineEdit = true; inlineFocus = field || "firstName"; renderMain();
@@ -759,7 +883,8 @@
   function renderInlineEditor(c){
     const inp = (name, label, type, val) => type === "textarea"
       ? `<textarea name="${name}" id="i_${name}" rows="3" aria-label="${label}">${esc(val)}</textarea>`
-      : `<input name="${name}" id="i_${name}" type="${type}" value="${esc(val)}" aria-label="${label}"${name==="tags"?' placeholder="family, work"':""}${name==="website"?' placeholder="https://"':""}>`;
+      : type === "select" ? `<select name="${name}" id="i_${name}" aria-label="${label}">${KIT.map(([v,l]) => `<option value="${v}" ${String(val||"")===v?"selected":""}>${l}</option>`).join("")}</select>`
+      : `<input name="${name}"${name==="introducedBy"?' list="contactNames" autocomplete="off"':""} id="i_${name}" type="${type}" value="${esc(val)}" aria-label="${label}"${name==="tags"?' placeholder="family, work"':""}${name==="website"?' placeholder="https://"':""}>`;
     const open = $("#inlineForm");
     if (open && open.dataset.id === c.id) return;   // keep what the user is typing when data refreshes
     $("#main").innerHTML = `<form class="detail" id="inlineForm" data-id="${esc(c.id)}" novalidate>
@@ -784,7 +909,7 @@
     </form>`;
     const el = $("#i_" + (inlineFocus || "firstName")) || $("#i_firstName");
     inlineFocus = null;
-    if (el){ el.focus(); if (el.setSelectionRange && el.type !== "date" && el.type !== "email" && el.type !== "url") { try { el.setSelectionRange(el.value.length, el.value.length); } catch(e){} } }
+    if (el){ el.focus(); if (el.setSelectionRange && /^(text|tel|search|textarea)$/.test(el.type)) { try { el.setSelectionRange(el.value.length, el.value.length); } catch(e){} } }
   }
   $("#main").addEventListener("submit", e => { if (e.target.id === "inlineForm"){ e.preventDefault(); submitInline(); } });
   $("#main").addEventListener("keydown", e => {
@@ -812,15 +937,15 @@
   }
 
   // ---------- formats: export ----------
-  const CSV_COLS = [["firstName","First Name"],["lastName","Last Name"],["phone","Phone"],["email","Email"],["company","Company"],["jobTitle","Job Title"],["address","Address"],["birthday","Birthday"],["website","Website"],["tags","Tags"],["notes","Notes"],["favorite","Favorite"]];
+  const CSV_COLS = [["firstName","First Name"],["lastName","Last Name"],["phone","Phone"],["email","Email"],["company","Company"],["jobTitle","Job Title"],["address","Address"],["birthday","Birthday"],["anniversary","Anniversary"],["website","Website"],["howMet","How We Met"],["introducedBy","Introduced By"],["keepInTouch","Keep In Touch (days)"],["tags","Tags"],["notes","Notes"],["favorite","Favorite"],["_last","Last Contacted"],["_strength","Relationship Strength"]];
   const csvCell = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   function toCSV(items){
     const lines = [CSV_COLS.map(c=>c[1]).join(",")];
-    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="favorite" ? (c.favorite?"yes":"") : c[k])).join(","));
+    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="favorite" ? (c.favorite?"yes":"") : k==="_last" ? lastContacted(c) : k==="_strength" ? strength(c) : c[k])).join(","));
     return lines.join("\r\n");
   }
   function toJSON(items){
-    const clean = items.map(c => { const o = {}; for (const f of FIELDS) o[f] = f==="tags" ? tagList(c) : c[f]; o.createdAt=c.createdAt; o.updatedAt=c.updatedAt; return o; });
+    const clean = items.map(c => { const o = {}; for (const f of FIELDS) o[f] = f==="tags" ? tagList(c) : c[f]; o.interactions=c.interactions||[]; o.createdAt=c.createdAt; o.updatedAt=c.updatedAt; return o; });
     return JSON.stringify(items.length === 1 && exportCtx?.single ? clean[0] : clean, null, 2);
   }
   const vEsc = s => String(s ?? "").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
@@ -834,6 +959,7 @@
       if (c.email) L.push(`EMAIL;TYPE=INTERNET:${vEsc(c.email)}`);
       if (c.address) L.push(`ADR;TYPE=HOME:;;${vEsc(c.address)};;;;`);
       if (c.birthday) L.push(`BDAY:${c.birthday}`);
+      if (c.anniversary) L.push(`X-ANNIVERSARY:${c.anniversary}`);
       if (c.website) L.push(`URL:${vEsc(c.website)}`);
       if (tagList(c).length) L.push(`CATEGORIES:${tagList(c).map(vEsc).join(",")}`);
       if (c.notes) L.push(`NOTE:${vEsc(c.notes)}`);
@@ -908,6 +1034,11 @@
   }
   function mapHeader(h){
     const s = h.toLowerCase().replace(/[^a-z0-9]/g,"");
+    if (s.includes("howwemet") || s.includes("howmet") || s === "met" || s === "metat") return "howMet";
+    if (s.includes("introduced") || s.includes("referredby") || s.includes("referral")) return "introducedBy";
+    if (s.includes("anniversary")) return "anniversary";
+    if (s.includes("keepintouch") || s.includes("followupdays")) return "keepInTouch";
+    if (s.includes("lastcontacted") || s.includes("strength")) return null;
     if (/^(firstname|givenname|first)$/.test(s)) return "firstName";
     if (/^(lastname|familyname|surname|last)$/.test(s)) return "lastName";
     if (/^(name|fullname|displayname|contactname)$/.test(s)) return "_name";
@@ -962,6 +1093,7 @@
           case "ORG": o.company = vUnesc(val.split(";").filter(Boolean).join(", ")); break;
           case "TITLE": o.jobTitle = vUnesc(val); break;
           case "ADR": if (!o.address) o.address = val.split(";").map(vUnesc).filter(s=>s.trim()).join(", "); break;
+          case "ANNIVERSARY": case "X-ANNIVERSARY": { const d = val.match(/^(\d{4})-?(\d{2})-?(\d{2})/); if (d) o.anniversary = `${d[1]}-${d[2]}-${d[3]}`; break; }
           case "BDAY": { const d = val.replace(/^--/,"").match(/^(\d{4})-?(\d{2})-?(\d{2})/); o.birthday = d ? `${d[1]}-${d[2]}-${d[3]}` : ""; break; }
           case "URL": if (!o.website) o.website = vUnesc(val); break;
           case "NOTE": o.notes = vUnesc(val); break;
@@ -1057,6 +1189,357 @@
     toast(`Imported ${toAdd.length} contact${toAdd.length===1?"":"s"}`);
   });
 
+  // ---------- relationship tracking ----------
+  $("#f_keepInTouch").innerHTML = KIT.map(([v,l]) => `<option value="${v}">${l}</option>`).join("");
+  const pad2 = n => String(n).padStart(2, "0");
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+  const dayNum = s => { const [y,m,d] = String(s).slice(0,10).split("-").map(Number); return Math.floor(Date.UTC(y, m-1, d) / 864e5); };
+  const daysAgo = s => dayNum(today()) - dayNum(s);
+  const lastContacted = c => (c.interactions && c.interactions[0] && c.interactions[0].date) || "";
+  function strength(c){
+    const t = dayNum(today()); let s = 0;
+    for (const i of c.interactions || []){
+      const age = t - dayNum(i.date); if (age < 0 || age > 730) continue;
+      s += Math.exp(-age / 90) * (i.type === "meeting" ? 1.5 : i.type === "call" ? 1.2 : 1);
+    }
+    return Math.round(100 * (1 - Math.exp(-s / 3)));
+  }
+  const strengthLabel = n => n >= 70 ? "Strong" : n >= 40 ? "Good" : n >= 15 ? "Fading" : n > 0 ? "Cold" : "No activity yet";
+  const strengthClass = n => n >= 70 ? "strong" : n >= 40 ? "good" : n >= 15 ? "fading" : "cold";
+  function agoText(s){
+    const d = daysAgo(s);
+    if (d < 0) return "on " + fmtShort(s);
+    if (d === 0) return "today"; if (d === 1) return "yesterday";
+    if (d < 45) return `${d} days ago`;
+    if (d < 365) { const m = Math.round(d / 30); return `${m} month${m===1?"":"s"} ago`; }
+    const y = Math.floor(d / 365); return `${y} year${y===1?"":"s"} ago`;
+  }
+  const fmtShort = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d).toLocaleDateString(undefined, { month:"short", day:"numeric", year: y === new Date().getFullYear() ? undefined : "numeric" }); };
+  // next yearly occurrence of a date (birthday / anniversary)
+  function nextOcc(s){
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s || "")) return null;
+    const [y,m,d] = s.split("-").map(Number), t = dayNum(today()), now = new Date();
+    const at = yr => Math.floor(Date.UTC(yr, m-1, Math.min(d, new Date(Date.UTC(yr, m, 0)).getUTCDate())) / 864e5);
+    let yr = now.getFullYear(); if (at(yr) < t) yr++;
+    return { inDays: at(yr) - t, years: yr - y, date: new Date(yr, m-1, d) };
+  }
+  function whenText(n){ return n === 0 ? "Today" : n === 1 ? "Tomorrow" : `In ${n} days`; }
+  function occText(s, kind){
+    const o = nextOcc(s); if (!o) return "";
+    const yrs = o.years > 0 && o.years < 150 ? (kind === "turns" ? ` · turns ${o.years}` : ` · ${o.years} year${o.years===1?"":"s"}`) : "";
+    return o.inDays <= 30 ? ` <span class="pill soon">${whenText(o.inDays)}${yrs}</span>` : "";
+  }
+  function introLink(c){
+    if (!c.introducedBy) return "";
+    const target = contacts.find(x => x.id !== c.id && fullName(x).toLowerCase() === c.introducedBy.trim().toLowerCase());
+    return target ? `<a href="#" data-goto="${esc(target.id)}">${esc(c.introducedBy)}</a>` : esc(c.introducedBy);
+  }
+  function followUp(c){
+    const every = +c.keepInTouch; if (!every) return null;
+    const last = lastContacted(c), since = last ? daysAgo(last) : null;
+    return { every, since, due: since === null || since >= every, dueIn: since === null ? 0 : every - since };
+  }
+  function introducedList(c){
+    return contacts.filter(x => x.id !== c.id && x.introducedBy && x.introducedBy.trim().toLowerCase() === fullName(c).toLowerCase());
+  }
+
+  let logDraft = null;   // {type} while the log form is open
+  function activityCard(c){
+    const fu = followUp(c), last = lastContacted(c), st = strength(c);
+    const intros = introducedList(c);
+    const items = c.interactions || [];
+    const SHOW = 30;
+    const syncBtn = mcp && c.email ? `<button class="btn sm" data-act="sync" title="Find emails and meetings with ${esc(c.email)}">⟳ Sync Gmail &amp; Calendar</button>` : "";
+    return `<div class="card activity">
+      <div class="acthead"><h3>Activity</h3>
+        <div class="meter" title="Relationship strength ${st}/100"><span style="width:${st}%" class="s-${strengthClass(st)}"></span></div>
+        <span class="mlabel">${strengthLabel(st)}${st ? ` · ${st}/100` : ""}</span></div>
+      <div class="statline">
+        <span>Last contacted: <b>${last ? agoText(last) : "never"}</b></span>
+        <label>Keep in touch
+          <select data-kit="1">${KIT.map(([v,l]) => `<option value="${v}" ${c.keepInTouch===v?"selected":""}>${l}</option>`).join("")}</select></label>
+        ${fu ? `<span class="pill ${fu.due ? "due" : ""}">${fu.due ? (fu.since === null ? "Reach out — never contacted" : `Overdue by ${fu.since - fu.every} day${fu.since-fu.every===1?"":"s"}`) : `Next check-in in ${fu.dueIn} day${fu.dueIn===1?"":"s"}`}</span>` : ""}
+      </div>
+      <div class="logbtns">
+        ${Object.entries(ITYPES).map(([k,t]) => `<button class="btn sm" data-log="${k}">${t.icon} ${t.label}</button>`).join("")}
+        ${syncBtn}
+      </div>
+      <div id="syncStatus" class="note" aria-live="polite">${c.syncedAt && toDay(c.syncedAt) ? `Last synced ${agoText(toDay(c.syncedAt))}` : ""}</div>
+      <form id="logForm" class="logform" ${logDraft ? "" : "hidden"} novalidate>
+        <select name="type">${Object.entries(ITYPES).map(([k,t]) => `<option value="${k}" ${logDraft?.type===k?"selected":""}>${t.icon} ${t.label}</option>`).join("")}</select>
+        <input type="date" name="date" value="${today()}" max="${today()}" required>
+        <input name="note" placeholder="Short note — what did you talk about?" maxlength="2000">
+        <button type="submit" class="btn primary sm">Save</button>
+        <button type="button" class="btn sm" data-act="cancelLog">Cancel</button>
+      </form>
+      ${items.length ? `<ul class="timeline">${items.slice(0, SHOW).map(i => `<li>
+          <span class="ti">${ITYPES[i.type].icon}</span>
+          <div class="tb"><div><b>${ITYPES[i.type].label}</b> · <span class="muted">${fmtShort(i.date)} (${agoText(i.date)})</span>${i.source ? ` <span class="pill src">${i.source === "gmail" ? "Gmail" : "Calendar"}</span>` : ""}</div>${i.note ? `<div class="tn">${esc(i.note)}</div>` : ""}</div>
+          <button class="x" data-delint="${esc(i.id)}" title="Remove" aria-label="Remove this entry">✕</button></li>`).join("")}</ul>
+          ${items.length > SHOW ? `<p class="note">${items.length - SHOW} older entries not shown (they still count, and are included in JSON exports).</p>` : ""}`
+        : `<p class="note" style="margin:6px 0 12px">No interactions logged yet. Log a call, email or meeting to start tracking this relationship.</p>`}
+      ${intros.length ? `<div class="intros"><span class="muted">Introduced you to:</span> ${intros.map(x => `<a href="#" data-goto="${esc(x.id)}">${esc(fullName(x))}</a>`).join(", ")}</div>` : ""}
+    </div>`;
+  }
+
+  async function addInteraction(c, it){
+    const n = normalize({ ...c, interactions: [...(c.interactions||[]), { id: uid(), ...it }], updatedAt: new Date().toISOString() });
+    contacts = contacts.map(x => x.id === c.id ? n : x);
+    render();
+    await persist(n);
+    return n;
+  }
+
+  // ---------- reminders ----------
+  function reminderData(){
+    const events = [], due = [];
+    for (const c of contacts){
+      for (const [field, kind] of [["birthday","birthday"],["anniversary","anniversary"]]){
+        const o = nextOcc(c[field]); if (o && o.inDays <= 14) events.push({ c, kind, ...o });
+      }
+      const f = followUp(c); if (f && f.due) due.push({ c, ...f });
+    }
+    events.sort((a,b) => a.inDays - b.inDays || fullName(a.c).localeCompare(fullName(b.c)));
+    due.sort((a,b) => (b.since ?? 1e9) - b.every - ((a.since ?? 1e9) - a.every) || fullName(a.c).localeCompare(fullName(b.c)));
+    return { events, due };
+  }
+  function reminderCount(){ const r = reminderData(); return r.due.length + r.events.filter(e => e.inDays <= 7).length; }
+
+  function renderReminders(){
+    $("#app").classList.remove("viewing");
+    const { events, due } = reminderData();
+    const tracked = contacts.filter(c => +c.keepInTouch).length;
+    const fading = contacts.filter(c => (c.interactions||[]).length && strength(c) < 15 && !followUp(c)?.due)
+      .sort((a,b) => strength(a) - strength(b)).slice(0, 5);
+    const person = c => `<div class="avatar" style="background:${colorFor(c)}">${esc(initials(c))}</div>`;
+    let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Reminders</h2>
+      <p>Birthdays, anniversaries and people it's time to get back in touch with.</p></div>
+      ${mcp ? `<button class="btn" data-ract="syncAll" id="syncAllBtn">⟳ Sync all from Gmail &amp; Calendar</button>` : ""}</div>
+      <div id="syncAllStatus" class="note" aria-live="polite" style="margin:-8px 0 14px"></div>`;
+
+    h += `<div class="dupgroup"><div class="gh"><span>🎉</span><span class="key">Coming up · next 14 days</span><span class="n">${events.length}</span></div>`;
+    h += events.length ? events.map(e => `<div class="dupitem ${e.inDays===0?"kept":""}">${person(e.c)}
+        <div class="meta"><div class="nm">${e.kind === "birthday" ? "🎂" : "💍"} ${esc(fullName(e.c))}'s ${e.kind}</div>
+          <div class="sub">${whenText(e.inDays)} · ${e.date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}${e.years > 0 && e.years < 150 ? (e.kind === "birthday" ? ` · turns ${e.years}` : ` · ${e.years} year${e.years===1?"":"s"}`) : ""}</div></div>
+        <div class="acts"><button class="btn sm" data-ract="log" data-type="message" data-id="${esc(e.c.id)}">💬 Sent wishes</button><button class="btn sm" data-ract="view" data-id="${esc(e.c.id)}">View</button></div></div>`).join("")
+      : `<div class="dupitem"><div class="meta sub">No birthdays or anniversaries in the next two weeks.</div></div>`;
+    h += `</div>`;
+
+    h += `<div class="dupgroup"><div class="gh"><span>⏰</span><span class="key">Time to reach out</span><span class="n">${due.length}</span></div>`;
+    h += due.length ? due.map(d => `<div class="dupitem">${person(d.c)}
+        <div class="meta"><div class="nm">${esc(fullName(d.c))}</div>
+          <div class="sub">${d.since === null ? "Never contacted" : `Last contacted ${agoText(lastContacted(d.c))}`} · goal: ${kitLabel(d.c.keepInTouch).toLowerCase()}</div></div>
+        <div class="acts">
+          <button class="btn sm" data-ract="log" data-type="call" data-id="${esc(d.c.id)}" title="Log a call today">📞 Called</button>
+          <button class="btn sm" data-ract="log" data-type="message" data-id="${esc(d.c.id)}" title="Log a message today">💬 Messaged</button>
+          <button class="btn sm" data-ract="view" data-id="${esc(d.c.id)}">View</button></div></div>`).join("")
+      : `<div class="dupitem"><div class="meta sub">${tracked ? "You're up to date with everyone you're keeping in touch with. 👏" : "Set <b>Keep in touch</b> on a contact (e.g. every month) and you'll be nudged here when it's been too long."}</div></div>`;
+    h += `</div>`;
+
+    if (fading.length){
+      h += `<div class="dupgroup"><div class="gh"><span>📉</span><span class="key">Fading relationships</span><span class="n">${fading.length}</span></div>`;
+      h += fading.map(c => `<div class="dupitem">${person(c)}<div class="meta"><div class="nm">${esc(fullName(c))}</div>
+        <div class="sub">Strength ${strength(c)}/100 · last contacted ${agoText(lastContacted(c))}</div></div>
+        <div class="acts"><button class="btn sm" data-ract="kit" data-id="${esc(c.id)}">Keep in touch monthly</button><button class="btn sm" data-ract="view" data-id="${esc(c.id)}">View</button></div></div>`).join("");
+      h += `</div>`;
+    }
+    h += `</div>`;
+    $("#main").innerHTML = h;
+  }
+
+  $("#main").addEventListener("click", async e => {
+    const r = e.target.closest("[data-ract]"); if (!r) return;
+    const c = contacts.find(x => x.id === r.dataset.id);
+    if (r.dataset.ract === "view" && c){ setView("contacts"); selectedId = c.id; render(); $("#main").scrollTop = 0; }
+    if (r.dataset.ract === "log" && c){ await addInteraction(c, { type: r.dataset.type, date: today(), note: r.dataset.type === "message" && nextOcc(c.birthday)?.inDays === 0 ? "Birthday wishes" : "" }); toast(`Logged ${ITYPES[r.dataset.type].label.toLowerCase()} with ${fullName(c)}`); }
+    if (r.dataset.ract === "kit" && c){ const n = normalize({ ...c, keepInTouch: "30", updatedAt: new Date().toISOString() }); contacts = contacts.map(x => x.id === c.id ? n : x); render(); await persist(n); toast(`You'll be reminded monthly about ${fullName(c)}`); }
+    const act = r.dataset.ract;
+    if (act === "syncAll") syncAll();
+    else if (act === "stopSync") syncStop = true;
+  });
+
+  // logging interactions & other detail-view controls
+  $("#main").addEventListener("click", async e => {
+    const g = e.target.closest("[data-goto]");
+    if (g){ e.preventDefault(); leaveInline(() => { setView("contacts"); selectedId = g.dataset.goto; render(); $("#main").scrollTop = 0; }); return; }
+    const c = contacts.find(x => x.id === selectedId); if (!c || view !== "contacts" || inlineEdit) return;
+    const lb = e.target.closest("[data-log]");
+    if (lb){ logDraft = { type: lb.dataset.log }; const f = $("#logForm"); f.hidden = false; f.elements.type.value = lb.dataset.log; f.elements.date.value = today(); f.elements.note.value = lb.dataset.log === "email" || lb.dataset.log === "meeting" ? "" : f.elements.note.value; f.elements.note.focus(); return; }
+    if (e.target.closest('[data-act="cancelLog"]')){ logDraft = null; $("#logForm").hidden = true; return; }
+    const del = e.target.closest("[data-delint]");
+    if (del){
+      const it = c.interactions.find(i => i.id === del.dataset.delint); if (!it) return;
+      askConfirm("Remove this entry?", `${ITYPES[it.type].icon} ${ITYPES[it.type].label} on ${fmtShort(it.date)}${it.note ? ` — “${esc(it.note.slice(0,80))}”` : ""} will be removed from ${esc(fullName(c))}'s activity.`, "Remove", async () => {
+        const n = normalize({ ...c, interactions: c.interactions.filter(i => i.id !== it.id), updatedAt: new Date().toISOString() });
+        contacts = contacts.map(x => x.id === c.id ? n : x); render(); await persist(n);
+      });
+      return;
+    }
+    if (e.target.closest('[data-act="sync"]')) syncOne(c);
+  });
+  $("#main").addEventListener("submit", async e => {
+    if (e.target.id !== "logForm") return;
+    e.preventDefault();
+    const c = contacts.find(x => x.id === selectedId); if (!c) return;
+    const f = e.target, date = f.elements.date.value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ toast("Pick a date"); return; }
+    logDraft = null;
+    await addInteraction(c, { type: f.elements.type.value, date, note: f.elements.note.value.trim() });
+    toast("Interaction logged");
+  });
+  $("#main").addEventListener("change", async e => {
+    if (!e.target.matches("select[data-kit]")) return;
+    const c = contacts.find(x => x.id === selectedId); if (!c) return;
+    const n = normalize({ ...c, keepInTouch: e.target.value, updatedAt: new Date().toISOString() });
+    contacts = contacts.map(x => x.id === c.id ? n : x); render(); await persist(n);
+    toast(n.keepInTouch ? `Reminder set: ${kitLabel(n.keepInTouch).toLowerCase()}` : "Keep-in-touch reminder turned off");
+  });
+
+  // ---------- Gmail & Google Calendar sync (viewer's own connectors) ----------
+  let mcp = null, syncStop = false, syncing = false;
+  const localISO = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  function toDay(v){
+    if (v == null || v === "") return "";
+    if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) && v.length <= 10) return v.slice(0,10);
+    const n = typeof v === "number" || /^\d{10,13}$/.test(String(v)) ? new Date(Number(v) < 1e12 ? Number(v) * 1000 : Number(v)) : new Date(v);
+    return isNaN(n) ? "" : `${n.getFullYear()}-${pad2(n.getMonth()+1)}-${pad2(n.getDate())}`;
+  }
+  function syncErrText(server, e){
+    switch (e && e.code){
+      case "needs_reauth": return `${server}: reconnect it in claude.ai Settings → Connectors.`;
+      case "server_not_connected": case "server_not_found": return `${server}: not connected — add it in claude.ai Settings → Connectors.`;
+      case "selection_required": return `${server}: choose which ${server} account to use when Claude asks.`;
+      case "not_in_manifest": case "not_granted": return `${server}: not allowed for this page.`;
+      case "blocked_by_policy": return `${server}: blocked by your organization.`;
+      case "approval_required": return `${server}: needs your approval — try again and choose Allow.`;
+      case "server_unavailable": case "rate_limited": return `${server}: temporarily unavailable — try again shortly.`;
+      case "tool_error": return `${server}: ${String(e.message || "error").slice(0, 160)}`;
+      default: return `${server}: couldn't sync (${(e && e.code) || "error"}).`;
+    }
+  }
+  const PERMANENT = new Set(["needs_reauth","server_not_connected","server_not_found","not_in_manifest","not_granted","blocked_by_policy","selection_required","capability_disabled","capability_removed"]);
+  async function fetchActivity(c, skip){
+    const email = String(c.email || "").trim(), found = [], errors = {};
+    if (!email) return { found, errors };
+    if (!skip.has("Gmail")){
+      try {
+        const r = await mcp.callTool("Gmail", "search_threads", { query: `(from:${email} OR to:${email}) newer_than:1y`, pageSize: 50, view: "THREAD_VIEW_SUMMARY" }, { cache: false });
+        const threads = (r.payload && (r.payload.threads || r.payload.items)) || [];
+        for (const t of threads){
+          const m = (t.messages || [])[0] || t;
+          const d = toDay(m.date || m.internalDate || t.date); if (!d) continue;
+          const n = t.messageCount || (t.messages || []).length;
+          found.push({ type: "email", date: d, note: String(m.subject || t.subject || "(no subject)").slice(0, 300) + (n > 1 ? ` · ${n} messages` : ""), source: "gmail", extId: "gmail:" + (t.id || m.id) });
+        }
+      } catch(e){ errors.Gmail = e; }
+    }
+    if (!skip.has("Google Calendar")){
+      try {
+        const now = new Date(), from = new Date(now.getTime() - 365 * 864e5);
+        const r = await mcp.callTool("Google Calendar", "list_events", { fullText: email, startTime: localISO(from), endTime: localISO(now), orderBy: "startTime", pageSize: 100 }, { cache: false });
+        const evs = (r.payload && (r.payload.items || r.payload.events)) || [];
+        for (const ev of evs){
+          if (ev.status === "cancelled") continue;
+          const d = toDay((ev.start && (ev.start.dateTime || ev.start.date)) || ev.startTime); if (!d) continue;
+          found.push({ type: "meeting", date: d, note: String(ev.summary || "Meeting").slice(0, 300), source: "calendar", extId: "gcal:" + (ev.id || d + ev.summary) });
+        }
+      } catch(e){ errors["Google Calendar"] = e; }
+    }
+    return { found, errors };
+  }
+  async function mergeActivity(c, found){
+    const have = new Set((c.interactions || []).map(i => i.extId).filter(Boolean));
+    const fresh = found.filter(f => !have.has(f.extId) && (have.add(f.extId), true));
+    const n = normalize({ ...c, interactions: [...(c.interactions || []), ...fresh.map(f => ({ id: uid(), ...f }))], syncedAt: new Date().toISOString(), updatedAt: fresh.length ? new Date().toISOString() : c.updatedAt });
+    contacts = contacts.map(x => x.id === c.id ? n : x);
+    await persist(n);
+    return fresh.length;
+  }
+  async function syncOne(c){
+    if (!mcp || syncing) return;
+    syncing = true;
+    const btn = $('[data-act="sync"]'); if (btn){ btn.disabled = true; btn.textContent = "⟳ Syncing…"; }
+    const st = $("#syncStatus"); if (st) st.textContent = "Looking for emails and meetings from the last year…";
+    try {
+      const { found, errors } = await fetchActivity(c, new Set());
+      const both = Object.keys(errors).length === 2;
+      const added = both ? 0 : await mergeActivity(c, found);
+      render();
+      const msgs = Object.entries(errors).map(([s, e]) => syncErrText(s, e));
+      const s2 = $("#syncStatus");
+      if (s2) s2.textContent = (both ? "" : `Synced — ${added} new ${added===1?"entry":"entries"} added. `) + msgs.join(" ");
+      if (!both) toast(added ? `Added ${added} from Gmail & Calendar` : "Already up to date");
+    } finally { syncing = false; const b = $('[data-act="sync"]'); if (b){ b.disabled = false; b.textContent = "⟳ Sync Gmail & Calendar"; } }
+  }
+  async function syncAll(){
+    if (!mcp || syncing) return;
+    const list = sorted(contacts).filter(c => c.email);
+    if (!list.length){ toast("No contacts with an email address"); return; }
+    syncing = true; syncStop = false;
+    const btn = $("#syncAllBtn"); if (btn){ btn.dataset.ract = "stopSync"; btn.textContent = "■ Stop syncing"; }
+    const status = t => { const s = $("#syncAllStatus"); if (s) s.textContent = t; };
+    const skip = new Set(), notes = {}; let added = 0, done = 0;
+    for (const c0 of list){
+      if (syncStop || skip.size === 2) break;
+      status(`Syncing ${done + 1} of ${list.length}: ${fullName(c0)}…`);
+      const c = contacts.find(x => x.id === c0.id); if (!c) continue;
+      const attempted = 2 - skip.size;
+      const { found, errors } = await fetchActivity(c, skip);
+      for (const [s, e] of Object.entries(errors)){ notes[s] = syncErrText(s, e); if (PERMANENT.has(e && e.code) || e?.code === "approval_required") skip.add(s); }
+      if (found.length || Object.keys(errors).length < attempted) added += await mergeActivity(c, found);
+      done++;
+    }
+    syncing = false;
+    render();
+    status(`${syncStop ? "Stopped. " : ""}Checked ${done} of ${list.length} contacts — ${added} new ${added===1?"entry":"entries"} added. ${Object.values(notes).join(" ")}`);
+  }
+
+  // ---------- business card scanning (Claude reads the photo) ----------
+  let sampleFn = null, scanCtl = null;
+  $("#scanBtn").addEventListener("click", () => { $("#cardInput").value = ""; $("#cardInput").click(); });
+  $("#scanRetry").addEventListener("click", () => { closeModal($("#scanScrim")); $("#cardInput").value = ""; $("#cardInput").click(); });
+  $("#scanStop").addEventListener("click", () => { scanCtl?.abort(); closeModal($("#scanScrim")); });
+  $("#cardInput").addEventListener("change", async e => {
+    const file = e.target.files[0]; if (!file || !sampleFn) return;
+    const url = URL.createObjectURL(file);
+    $("#scanImg").src = url; $("#scanStatus").textContent = "Reading the card…"; $("#scanStatus").style.color = "";
+    $("#scanRetry").hidden = true; $("#scanStop").hidden = false;
+    openModal("#scanScrim");
+    scanCtl = new AbortController();
+    const prompt = `The image is a photo of a business card. Read it and extract the contact details printed on it.
+Reply with only a JSON object with exactly these string keys (use "" when a value is not on the card):
+{"firstName":"","lastName":"","phone":"","email":"","company":"","jobTitle":"","address":"","website":"","notes":""}
+Rules: phone = the main mobile or direct number as printed; put any other numbers (office, fax), social handles and taglines in "notes", one per line.
+address = one line. Do not invent anything that is not visible on the card. If the image is not a business card, return all empty strings.`;
+    try {
+      const r = await sampleFn.json(prompt, { images: [file], signal: scanCtl.signal });
+      const o = r && typeof r === "object" ? r : {};
+      const pre = {}; for (const k of ["firstName","lastName","phone","email","company","jobTitle","address","website","notes"]) pre[k] = typeof o[k] === "string" ? o[k].trim() : "";
+      if (!Object.values(pre).some(Boolean)){ $("#scanStatus").textContent = "Couldn't find contact details on that photo. Try a sharper, well-lit picture of the card."; $("#scanStatus").style.color = "var(--danger)"; $("#scanRetry").hidden = false; $("#scanStop").hidden = true; return; }
+      pre.howMet = ""; pre.tags = "";
+      closeModal($("#scanScrim"));
+      setView("contacts"); render();
+      openEdit(null, pre, "Check the scanned contact");
+      toast("Card read — check the details and save");
+    } catch(err){
+      if (err && err.code === "cancelled") return;
+      const msg = { not_granted: "Card scanning needs permission to use Claude — allow it when asked.", rate_limited: "Too many requests right now — try again in a moment.", image_rejected: "That image couldn't be used — try a JPEG or PNG photo.", images_unavailable: "Card scanning isn't available here.", refused: "Claude couldn't read that image.", invalid_json: "Couldn't read the card clearly — try another photo.", sampling_disabled: "Claude isn't available for this account." }[err && err.code] || "Something went wrong reading the card — try again.";
+      $("#scanStatus").textContent = msg; $("#scanStatus").style.color = "var(--danger)";
+      $("#scanRetry").hidden = false; $("#scanStop").hidden = true;
+      if (err && ["not_granted","images_unavailable","sampling_disabled","not_declared","capability_disabled"].includes(err.code)) $("#scanBtn").hidden = true;
+    } finally { URL.revokeObjectURL(url); }
+  });
+
+  // light up optional capabilities when the page is running inside Claude
+  if (window.claude && typeof window.claude.use === "function"){
+    claude.use("sample").then(async s => {
+      if (!s) return;
+      const lim = await s.limits().catch(() => null);
+      if (lim && lim.images){ sampleFn = s; $("#scanBtn").hidden = false; }
+    }).catch(()=>{});
+    claude.use("mcp").then(m => { if (m){ mcp = m; render(); } }).catch(()=>{});
+  }
+
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
   $("#importBtn").addEventListener("click", openImport);
@@ -1093,7 +1576,7 @@
       case "delete": if (c) confirmDelete(c); break;
       case "export1": if (c) openExport([c], fullName(c), true); break;
       case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); render(); await persist(c); } break;
-      case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", createdAt: now, updatedAt: now }); contacts.push(d); selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
+      case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", interactions: [], syncedAt: "", createdAt: now, updatedAt: now }); contacts.push(d); selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
     }
   });
   document.addEventListener("keydown", e => {

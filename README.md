@@ -9,6 +9,12 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 - **Import** vCard (.vcf), CSV (Google / Outlook / generic) or JSON — one contact or many, with preview and duplicate skipping
 - **Export** a single contact or all contacts as CSV, JSON or vCard
 - **Bottom navigation** with *Duplicate numbers* and *Duplicate names* views: find matches, choose which contact to keep, and merge
+- **Relationship tracking**: log calls, emails, meetings, messages and notes with a date and short note; "how you met" and "introduced by" fields (linked to the introducer's contact)
+- **Reminders** tab: birthday and anniversary alerts for the next 14 days, "keep in touch" nudges (e.g. every 30 days) when you haven't been in contact, and fading relationships
+- **Relationship strength** score (0–100) from how often and how recently you interact
+- **Smarter duplicates**: "J. Smith" and "John Smith" are matched when their email is the same
+- **Business card scanning** (when hosted on Claude): snap a card and Claude fills in a new contact for you to check
+- **Gmail & Google Calendar sync** (when hosted on Claude, using the viewer's own connectors): emails and meetings from the last year are logged automatically
 - Responsive layout for desktop and mobile, light and dark mode
 
 ## Storage
