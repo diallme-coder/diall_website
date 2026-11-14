@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contact Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f6f7f9; --panel:#fff; --ink:#1b1f24; --muted:#6b7380; --line:#e4e7ec;
@@ -240,7 +241,8 @@
   .dupitem:last-child{border-bottom:0}
   .dupitem.kept{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
   .dupitem .meta{flex:1;min-width:0}
-  .dupitem .nm{font-weight:600}
+  .dupitem .nm{font-weight:600;display:flex;align-items:center;gap:6px}
+  .dupitem .nm svg.i{width:15px;height:15px;color:var(--warn)}
   .dupitem .sub{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dupitem .acts{display:flex;gap:6px;align-items:center}
   .keep{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
@@ -258,24 +260,229 @@
   .app.dupview{grid-template-columns:1fr}
   .app.dupview aside{display:none}
   .app.dupview main{display:block}
+
+  /* ===== Design refresh — an address book in cobalt ink: cool paper surfaces, serif names, quiet chrome, one accent ===== */
+  :root{
+    --bg:#eef0f4; --panel:#ffffff; --panel-2:#f6f7f9; --ink:#14161b; --muted:#646b7a; --line:#e3e6eb; --line-strong:#cdd2db;
+    --accent:#2747d0; --accent-2:#1d389f; --accent-ink:#ffffff; --accent-soft:#e9edfc;
+    --danger:#c3342e; --danger-soft:#fbeceb; --ok:#1c7a4b; --ok-soft:#e3f3e9; --warn:#935800; --warn-soft:#fcf0da; --star:#d39408;
+    --font-ui:"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display:"Instrument Serif", Georgia, "Times New Roman", serif;
+    --radius:14px; --radius-sm:10px;
+    --shadow:0 1px 0 rgba(20,22,27,.03), 0 1px 3px rgba(20,22,27,.06);
+    --shadow-lg:0 18px 50px rgba(20,22,27,.18);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d0f13; --panel:#15181e; --panel-2:#1b1f26; --ink:#eceef3; --muted:#959cab; --line:#252a33; --line-strong:#353b47;
+      --accent:#8098ff; --accent-2:#a3b4ff; --accent-ink:#0d1020; --accent-soft:#1b2342;
+      --danger:#f07a74; --danger-soft:#3a1c1c; --ok:#6fd39f; --ok-soft:#12301f; --warn:#f2c46b; --warn-soft:#352a12; --star:#f2c14e;
+      --shadow:none; --shadow-lg:0 18px 50px rgba(0,0,0,.55); color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d0f13; --panel:#15181e; --panel-2:#1b1f26; --ink:#eceef3; --muted:#959cab; --line:#252a33; --line-strong:#353b47;
+    --accent:#8098ff; --accent-2:#a3b4ff; --accent-ink:#0d1020; --accent-soft:#1b2342;
+    --danger:#f07a74; --danger-soft:#3a1c1c; --ok:#6fd39f; --ok-soft:#12301f; --warn:#f2c46b; --warn-soft:#352a12; --star:#f2c14e;
+    --shadow:none; --shadow-lg:0 18px 50px rgba(0,0,0,.55); color-scheme:dark;
+  }
+  body{font-family:var(--font-ui);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;background:var(--bg)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  svg.i{width:16px;height:16px;flex:none}
+  .muted{color:var(--muted)} .small{font-size:13px}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;scroll-behavior:auto!important} }
+
+  /* top bar */
+  header.top{padding:10px 18px;gap:8px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:6px}
+  .brand .mark{width:32px;height:32px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+  .brand .mark svg{width:18px;height:18px}
+  header.top h1{font-family:var(--font-display);font-weight:400;font-size:26px;letter-spacing:0;line-height:1}
+  .store{border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 8px;background:var(--panel-2);font-weight:500}
+
+  /* buttons */
+  .btn{border-radius:var(--radius-sm);padding:8px 13px;font-weight:600;font-size:13.5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;transition:background .15s,border-color .15s,box-shadow .15s,color .15s}
+  .btn:hover{border-color:var(--line-strong);background:var(--panel-2)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 1px 2px rgba(39,71,208,.3)}
+  .btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2);filter:none}
+  .btn.danger{color:var(--danger)}
+  .btn.danger:hover{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+  .btn.ghost{border-color:transparent;background:transparent}
+  .btn.ghost:hover{background:var(--panel-2)}
+  .btn.icon{padding:8px;width:36px;justify-content:center}
+  .btn.sm{padding:6px 10px;font-size:12.5px;border-radius:9px}
+  .btn.sm svg.i{width:14px;height:14px}
+  .btn.faved{color:var(--star);border-color:color-mix(in srgb,var(--star) 45%,transparent);background:color-mix(in srgb,var(--star) 9%,var(--panel))}
+  .btn.faved svg.i{fill:currentColor}
+
+  /* sidebar */
+  aside{background:var(--panel);border-right:1px solid var(--line)}
+  .searchbar{position:relative;padding:14px 14px 10px;border-bottom:0}
+  .searchbar .sicon{position:absolute;left:26px;top:50%;margin-top:2px;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+  .searchbar input{padding:10px 12px 10px 36px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+  .searchbar input:focus{outline:2px solid var(--accent);outline-offset:-1px;background:var(--panel)}
+  .filters{padding:0 14px 12px;gap:6px}
+  .chip{padding:5px 11px;font-weight:600;font-size:12px;background:var(--panel);border:1px solid var(--line);color:var(--muted);transition:all .15s}
+  .chip:hover{border-color:var(--line-strong);color:var(--ink)}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+  .listwrap{flex:1;min-height:0;display:flex;position:relative}
+  .list{flex:1;padding-bottom:8px}
+  .group{position:sticky;top:0;z-index:1;font-family:var(--font-display);font-size:19px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--accent);padding:6px 18px 2px;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(8px)}
+  .item{margin:1px 8px;padding:8px 10px;border-radius:12px;border-left:0;transition:background .12s}
+  .item:hover{background:var(--panel-2)}
+  .item.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+  .item .nm{font-weight:600;font-size:14px}
+  .item .sub{font-variant-numeric:tabular-nums}
+  .az{width:24px;flex:none;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:6px 0;font-size:10px;font-weight:700;color:var(--muted)}
+  .az:empty{display:none}
+  .az button{border:0;background:none;padding:0 5px;font:inherit;color:inherit;cursor:pointer;line-height:1.35;border-radius:4px}
+  .az button:hover{color:var(--accent);background:var(--accent-soft)}
+  .az button:disabled{opacity:.28;cursor:default;background:none;color:var(--muted)}
+  @media (max-height:620px){ .az{display:none} }
+  .count{padding:9px 18px;font-variant-numeric:tabular-nums;font-weight:500}
+
+  /* avatars */
+  .avatar{font-weight:650;letter-spacing:.02em;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+  .avatar.lg{width:96px;height:96px;font-size:34px}
+  .avbtn .cam{width:32px;height:32px;color:var(--ink)}
+  .avbtn .cam svg{width:16px;height:16px}
+
+  /* main: detail */
+  main{background:var(--bg)}
+  .detail{max-width:840px;padding:28px 28px 64px}
+  .back{gap:4px;margin:0 0 12px -8px;color:var(--muted)}
+  .dhead{gap:22px;padding:22px 24px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px}
+  .dhead h2{font-family:var(--font-display);font-weight:400;font-size:36px;line-height:1.05;letter-spacing:0;text-wrap:balance;display:flex;align-items:center;gap:8px}
+  .dhead .role{font-size:15px;margin-top:6px}
+  .editable-name .pen svg{width:16px;height:16px}
+  .actions{gap:6px;margin-bottom:16px;align-items:center}
+  .card{border-radius:var(--radius);padding:2px 22px;box-shadow:var(--shadow)}
+  .row{grid-template-columns:160px 1fr;gap:16px;padding:13px 0;align-items:start}
+  .row .k{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--muted);padding-top:1px}
+  .row .k svg{width:16px;height:16px;color:var(--muted);opacity:.85}
+  .row .v{font-size:14.5px}
+  .row.editable{margin:0 -12px;padding-left:12px;padding-right:40px;border-radius:10px}
+  .row.editable .pen{top:14px;right:12px}
+  .row.editable .pen svg{width:15px;height:15px}
+  .tag{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-weight:500;padding:2px 10px}
+  .addchips{margin:0 0 16px}
+  .addchips .chip{border-style:dashed}
+  .stamp{padding:0 4px}
+  .pills{margin-top:10px}
+  .pill{border-radius:999px;font-weight:600;font-size:11.5px;padding:3px 9px;background:var(--panel-2);border-color:var(--line)}
+  .pill svg{width:12px;height:12px}
+  .pill.soon,.pill.s-fading{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 35%,transparent);color:var(--warn)}
+  .pill.s-strong{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok)}
+  .pill.s-good{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent);color:var(--accent)}
+  .pill.due{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 40%,transparent);color:var(--danger)}
+  .card.editing{box-shadow:0 0 0 4px var(--accent-soft)}
+  .editbar{background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px)}
+
+  /* activity */
+  .activity{padding:18px 22px}
+  .acthead h3{font-family:var(--font-display);font-weight:400;font-size:24px}
+  .meter{height:6px;border-radius:999px}
+  .meter span{border-radius:999px}
+  .meter .s-strong{background:var(--ok)} .meter .s-good{background:var(--accent)} .meter .s-fading{background:var(--warn)} .meter .s-cold{background:var(--line-strong)}
+  .logbtns{gap:6px}
+  .timeline li{gap:12px;padding:12px 0}
+  .ti{width:32px;height:32px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+  .ti svg{width:15px;height:15px}
+  .ti.t-call{color:var(--ok)} .ti.t-meeting{color:var(--accent)} .ti.t-email{color:#7a4fd0} .ti.t-message{color:#0e7f8f}
+  .logform{background:var(--panel-2)}
+
+  /* overview */
+  .overview{max-width:980px;margin:0 auto;padding:30px 28px 64px;display:grid;gap:18px}
+  .ovhead h2{font-family:var(--font-display);font-weight:400;font-size:40px;margin:0;line-height:1.05}
+  .ovhead p{margin:6px 0 0;color:var(--muted)}
+  .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);cursor:pointer;color:var(--ink);transition:border-color .15s,transform .15s}
+  .tile:hover:not(:disabled){border-color:var(--line-strong);transform:translateY(-1px)}
+  .tile:disabled{cursor:default}
+  .tile .tn{font-family:var(--font-display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
+  .tile .tl{font-weight:650;margin-top:6px}
+  .tile .ts{font-size:12px;color:var(--muted)}
+  .tile.warm{box-shadow:inset 3px 0 0 var(--warn)} .tile.alert{box-shadow:inset 3px 0 0 var(--danger)}
+  .ovcols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .ovcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 10px 10px}
+  .ovcard h3{display:flex;align-items:center;gap:8px;margin:0 8px 8px;font-size:13px;font-weight:650;color:var(--muted);text-transform:none}
+  .prow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;text-decoration:none;color:inherit}
+  .prow:hover{background:var(--panel-2)}
+  .prow .avatar{width:32px;height:32px;font-size:12px}
+  .prow .meta{display:flex;flex-direction:column;min-width:0;flex:1}
+  .prow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prow .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ovcard .small{margin:4px 8px 6px}
+  @media (max-width:1100px){ .ovcols{grid-template-columns:1fr 1fr} .ovcols .ovcard:last-child{grid-column:1/-1} }
+  @media (max-width:700px){ .tiles{grid-template-columns:1fr 1fr} .ovcols{grid-template-columns:1fr} }
+  .empty h2{font-family:var(--font-display);font-weight:400;font-size:32px;color:var(--ink)}
+  .emptyart{width:72px;height:72px;margin:0 auto;border-radius:20px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+  .emptyart svg{width:34px;height:34px}
+
+  /* full-width views (reminders, scan, duplicates) */
+  .dupwrap{max-width:900px;padding:28px 28px 48px}
+  .duphead h2{font-family:var(--font-display);font-weight:400;font-size:36px;line-height:1.05}
+  .dupgroup{border-radius:var(--radius);box-shadow:var(--shadow)}
+  .dupgroup .gh{background:var(--panel);padding:13px 16px;gap:10px}
+  .dupgroup .gh .key{font-weight:650}
+  .gi{width:28px;height:28px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+  .gi svg{width:15px;height:15px}
+  .dupitem{padding:11px 16px}
+  .dupitem.kept{background:color-mix(in srgb,var(--accent-soft) 60%,transparent)}
+  .dupsearch{border-radius:12px}
+
+  /* modals & toast */
+  .scrim{background:rgba(13,15,19,.42);backdrop-filter:blur(3px)}
+  .modal{border-radius:18px;box-shadow:var(--shadow-lg);border-color:var(--line)}
+  .modal header{padding:16px 22px}
+  .modal header h3{font-family:var(--font-display);font-weight:400;font-size:24px}
+  .modal .body{padding:18px 22px}
+  .modal footer{padding:14px 22px;background:var(--panel-2);border-radius:0 0 18px 18px}
+  .field label{font-size:12px;font-weight:650;color:var(--muted)}
+  .field input,.field textarea,.field select{border-radius:10px;background:var(--panel-2);border:1px solid var(--line)}
+  .field input:focus,.field textarea:focus,.field select:focus{background:var(--panel)}
+  .opt{border-radius:12px}
+  .toast{border-radius:12px;box-shadow:var(--shadow-lg);font-weight:500;padding:11px 16px}
+
+  /* bottom navigation */
+  .bottomnav{background:color-mix(in srgb,var(--panel) 86%,transparent);backdrop-filter:saturate(1.4) blur(14px);border-top:1px solid var(--line);box-shadow:none}
+  .bottomnav button{color:var(--muted);font-weight:600}
+  .bottomnav button.on{color:var(--accent);font-weight:650}
+  .bottomnav button.on::before{display:none}
+  .bottomnav button.on .ic{background:var(--accent);color:var(--accent-ink)}
+  .badge{box-shadow:0 0 0 2px var(--panel);background:var(--danger)}
+
+  @media (max-width:760px){
+    .detail,.overview,.dupwrap{padding:18px 16px 40px}
+    .dhead{padding:16px;gap:16px}
+    .dhead h2{font-size:30px}
+    .avatar.lg{width:76px;height:76px;font-size:28px}
+    .actions .spacer{display:none}
+    .row{grid-template-columns:1fr;gap:4px}
+    header.top{padding:10px 14px}
+    header.top h1{font-size:23px}
+    .btn.icon{width:34px}
+  }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <header class="top">
-    <h1>Contacts</h1>
+    <div class="brand"><span class="mark"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M9 7h7M9 11h5"/></svg></span><h1>Contacts</h1></div>
     <div class="store"><span class="dot" id="storeDot"></span><span id="storeTxt">Loading…</span></div>
     <div class="spacer"></div>
-    <button class="btn" id="scanBtn" title="Scan a business card" hidden>📷 <span class="lbl">Scan card</span></button>
-    <button class="btn" id="importBtn" title="Import contacts">⤓ <span class="lbl">Import</span></button>
-    <button class="btn" id="exportAllBtn" title="Export all contacts">⤒ <span class="lbl">Export all</span></button>
-    <button class="btn primary" id="addBtn">＋ <span class="lbl">New contact</span></button>
+    <button class="btn" id="scanBtn" title="Scan a business card" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2M14 10h4M14 13h3"/></svg><span class="lbl">Scan card</span></button>
+    <button class="btn" id="importBtn" title="Import contacts"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span class="lbl">Import</span></button>
+    <button class="btn" id="exportAllBtn" title="Export all contacts"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg><span class="lbl">Export</span></button>
+    <button class="btn primary" id="addBtn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">New contact</span></button>
   </header>
 
   <aside>
-    <div class="searchbar"><input id="search" type="search" placeholder="Search name, phone, email, company, tag…" autocomplete="off"></div>
+    <div class="searchbar"><svg class="i sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><label for="search" class="sr">Search contacts</label><input id="search" type="search" placeholder="Search name, phone, email, company, tag…" autocomplete="off"></div>
     <div class="filters" id="filters"></div>
-    <div class="list" id="list"></div>
+    <div class="listwrap"><div class="list" id="list"></div><nav class="az" id="az" aria-label="Jump to letter"></nav></div>
     <div class="count" id="count"></div>
   </aside>
 
@@ -447,6 +654,8 @@
   const $ = (s, r=document) => r.querySelector(s);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const ICON_PATHS = {"search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>", "import": "<path d=\"M12 3v12\"/><path d=\"m7 10 5 5 5-5\"/><path d=\"M5 21h14\"/>", "export": "<path d=\"M12 21V9\"/><path d=\"m7 14 5-5 5 5\"/><path d=\"M5 3h14\"/>", "camera": "<path d=\"M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>", "card": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"9\" cy=\"11\" r=\"2\"/><path d=\"M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2M14 10h4M14 13h3\"/>", "edit": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>", "star": "<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z\"/>", "copy": "<rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"m19 6-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/>", "phone": "<path d=\"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z\"/>", "mail": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"m3 7 9 6 9-6\"/>", "building": "<rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"1\"/><path d=\"M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2\"/>", "briefcase": "<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18\"/>", "pin": "<path d=\"M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z\"/><circle cx=\"12\" cy=\"9\" r=\"2.5\"/>", "cake": "<path d=\"M4 21v-9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9\"/><path d=\"M4 16c1.5 1 3 1 4 0s3-1 4 0 3 1 4 0 2.5-1 4 0\"/><path d=\"M2 21h20M12 10V7\"/>", "heart": "<path d=\"M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z\"/>", "globe": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8\"/>", "spark": "<path d=\"M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7\"/><path d=\"M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7\"/>", "tag": "<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z\"/><circle cx=\"7.5\" cy=\"7.5\" r=\"1.5\"/>", "note": "<path d=\"M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z\"/><path d=\"M14 3v6h6M8 13h8M8 17h5\"/>", "message": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z\"/>", "calendar": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "bell": "<path d=\"M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.7 21a2 2 0 0 1-3.4 0\"/>", "refresh": "<path d=\"M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8\"/><path d=\"M21 3v5h-5M3 21v-5h5\"/>", "back": "<path d=\"m15 18-6-6 6-6\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "trend": "<path d=\"m22 17-8.5-8.5-5 5L2 7\"/><path d=\"M16 17h6v-6\"/>", "mobile": "<rect x=\"6\" y=\"2\" width=\"12\" height=\"20\" rx=\"2\"/><path d=\"M11 18h2\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5\"/>", "user": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/>", "book": "<path d=\"M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5Z\"/><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20M9 7h7M9 11h5\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "pen": "<path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>"};
+  const ic = n => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n] || ""}</svg>`;
   const fullName = c => [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || c.company || c.email || c.phone || "Unnamed";
   const initials = c => {
     const n = fullName(c).split(/\s+/).filter(Boolean);
@@ -581,7 +790,7 @@
     for (const c of items){
       const L = (fullName(c)[0] || "#").toUpperCase();
       const g = /[A-Z]/.test(L) ? L : "#";
-      if (g !== letter){ letter = g; h += `<div class="group">${g}</div>`; }
+      if (g !== letter){ letter = g; h += `<div class="group" data-letter="${g}">${g}</div>`; }
       const sub = c.phone || c.email || c.company || "";
       h += `<div class="item ${c.id===selectedId?"sel":""}" data-id="${esc(c.id)}">
         ${avatar(c)}
@@ -589,10 +798,13 @@
     }
     if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
     $("#list").innerHTML = h;
+    const present = new Set([...$("#list").querySelectorAll(".group")].map(x => x.dataset.letter));
+    $("#az").innerHTML = items.length > 12 ? [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ#"].map(L => `<button type="button" data-az="${L}" ${present.has(L) ? "" : "disabled"} aria-label="Jump to ${L === "#" ? "other" : L}">${L}</button>`).join("") : "";
     $("#count").textContent = items.length === contacts.length ? `${contacts.length} contact${contacts.length===1?"":"s"}` : `${items.length} of ${contacts.length} shown`;
   }
 
-  function row(k, v, field){ return v ? `<div class="row editable" data-edit="${field}" title="Click to edit"><div class="k">${k}</div><div class="v">${v}</div><span class="pen" aria-hidden="true">✎</span></div>` : ""; }
+  const ROW_ICON = { phone:"phone", email:"mail", company:"building", jobTitle:"briefcase", address:"pin", birthday:"cake", anniversary:"heart", website:"globe", howMet:"spark", introducedBy:"link", tags:"tag", notes:"note" };
+  function row(k, v, field){ return v ? `<div class="row editable" data-edit="${field}" title="Click to edit"><div class="k">${ic(ROW_ICON[field] || "note")}<span>${k}</span></div><div class="v">${v}</div><span class="pen" aria-hidden="true">${ic("pen")}</span></div>` : ""; }
   function fmtDate(d){ if(!d) return ""; const t = new Date(d + (d.length===10?"T00:00:00":"")); return isNaN(t) ? esc(d) : t.toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}); }
   function safeUrl(u){ if(!u) return ""; const s = /^https?:\/\//i.test(u) ? u : "https://"+u; try { const x=new URL(s); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch(e){ return ""; } }
 
@@ -601,11 +813,12 @@
     $("#app").classList.toggle("viewing", !!c);
     if (!c){
       inlineEdit = false;
-      $("#main").innerHTML = `<div class="empty"><div><div style="font-size:40px">👥</div>
-        <h2>${contacts.length ? "Select a contact" : "Your contact list is empty"}</h2>
-        <p>${contacts.length ? "Pick someone from the list to see their details." : "Add your first contact, or import a vCard, CSV or JSON file."}</p>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
-          <button class="btn primary" data-act="add">＋ New contact</button><button class="btn" data-act="import">⤓ Import</button></div></div></div>`;
+      $("#main").innerHTML = contacts.length ? overviewHTML() : `<div class="empty"><div>
+        <div class="emptyart">${ic("book")}</div>
+        <h2>Your address book is empty</h2>
+        <p>Add your first contact, or bring in your phone's address book from a vCard, CSV or JSON file.</p>
+        <div class="row-btns" style="justify-content:center;margin-top:16px">
+          <button class="btn primary" data-act="add">${ic("plus")}New contact</button><button class="btn" data-act="import">${ic("import")}Import</button></div></div></div>`;
       return;
     }
     if (inlineEdit){ renderInlineEditor(c); return; }
@@ -614,18 +827,21 @@
     const missing = EDIT_ROWS.filter(([k]) => k === "tags" ? !tagList(c).length : !c[k]);
     const st = strength(c), last = lastContacted(c);
     $("#main").innerHTML = `<div class="detail">
-      <button class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
+      <button class="btn ghost back" data-act="back">${ic("back")}All contacts</button>
       <div class="dhead">
-        <button class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">📷</span></button>
+        <button class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">${ic("camera")}</span></button>
         <div class="editable-name" data-edit="firstName" title="Click to edit"><h2>${esc(fullName(c))} <span class="pen" aria-hidden="true">✎</span></h2>${role?`<div class="role">${esc(role)}</div>`:""}
           <div class="pills">${st ? `<span class="pill s-${strengthClass(st)}" title="Relationship strength (0–100), from how often and how recently you've interacted">${strengthLabel(st)} · ${st}</span>` : ""}${last ? `<span class="pill">Last contacted ${agoText(last)}</span>` : `<span class="pill">Never contacted</span>`}</div></div>
       </div>
       <div class="actions">
-        <button class="btn primary" data-act="edit">✎ Edit</button>
-        <button class="btn" data-act="fav">${c.favorite?'<span class="star">★</span> Favorited':'☆ Favorite'}</button>
-        <button class="btn" data-act="export1">⤒ Export contact</button>
-        <button class="btn" data-act="dup">⧉ Duplicate</button>
-        <button class="btn danger" data-act="delete">🗑 Delete</button>
+        <button class="btn primary" data-act="edit">${ic("edit")}Edit</button>
+        <button class="btn ${c.favorite ? "faved" : ""}" data-act="fav" aria-pressed="${c.favorite}">${ic("star")}${c.favorite ? "Favorite" : "Add to favorites"}</button>
+        ${c.phone ? `<a class="btn" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${ic("phone")}Call</a>` : ""}
+        ${c.email ? `<a class="btn" href="mailto:${esc(c.email)}">${ic("mail")}Email</a>` : ""}
+        <span class="spacer"></span>
+        <button class="btn icon" data-act="export1" title="Export contact" aria-label="Export contact">${ic("export")}</button>
+        <button class="btn icon" data-act="dup" title="Duplicate" aria-label="Duplicate">${ic("copy")}</button>
+        <button class="btn icon danger" data-act="delete" title="Delete" aria-label="Delete">${ic("trash")}</button>
       </div>
       <div class="card">
         ${row("Phone", c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>` : "", "phone")}
@@ -734,7 +950,7 @@
       if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
       const label = isPhone ? (g.items[0].phone) : fullName(g.items[0]);
       h += `<div class="dupgroup"><div class="gh">
-        <span>${isPhone ? "📞" : "👤"}</span><span class="key">${esc(label)}</span>${g.reason === "Same email" ? `<span class="pill" title="Names look alike and the email address matches">✉️ Same email</span>` : ""}<span class="n">${g.items.length} contacts</span>
+        <span class="gi">${ic(isPhone ? "phone" : "user")}</span><span class="key">${esc(label)}</span>${g.reason === "Same email" ? `<span class="pill" title="Names look alike and the email address matches">${ic("mail")}Same email</span>` : ""}<span class="n">${g.items.length} contacts</span>
         <button class="btn sm primary" data-dact="merge" data-g="${esc(gk)}">Merge into one</button></div>`;
       for (const c of g.items){
         h += `<div class="dupitem ${c.id===keepId?"kept":""}">
@@ -963,9 +1179,9 @@
     const open = $("#inlineForm");
     if (open && open.dataset.id === c.id) return;   // keep what the user is typing when data refreshes
     $("#main").innerHTML = `<form class="detail" id="inlineForm" data-id="${esc(c.id)}" novalidate>
-      <button type="button" class="btn ghost back" data-act="back" style="margin-bottom:12px">← All contacts</button>
+      <button type="button" class="btn ghost back" data-act="back">${ic("back")}All contacts</button>
       <div class="dhead">
-        <button type="button" class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">📷</span></button>
+        <button type="button" class="avbtn" data-act="avatar" title="Change photo or icon" aria-label="Change photo or icon">${avatar(c, "lg")}<span class="cam" aria-hidden="true">${ic("camera")}</span></button>
         <div class="namegrid">
           <div class="field"><label for="i_firstName">First name</label>${inp("firstName","First name","text",c.firstName)}</div>
           <div class="field"><label for="i_lastName">Last name</label>${inp("lastName","Last name","text",c.lastName)}</div>
@@ -1330,13 +1546,14 @@
     return contacts.filter(x => x.id !== c.id && x.introducedBy && x.introducedBy.trim().toLowerCase() === fullName(c).toLowerCase());
   }
 
+  const TYPE_ICON = { call:"phone", email:"mail", meeting:"users", message:"message", other:"note" };
   let logDraft = null;   // {type} while the log form is open
   function activityCard(c){
     const fu = followUp(c), last = lastContacted(c), st = strength(c);
     const intros = introducedList(c);
     const items = c.interactions || [];
     const SHOW = 30;
-    const syncBtn = mcp && c.email ? `<button class="btn sm" data-act="sync" title="Find emails and meetings with ${esc(c.email)}">⟳ Sync Gmail &amp; Calendar</button>` : "";
+    const syncBtn = mcp && c.email ? `<button class="btn sm" data-act="sync" title="Find emails and meetings with ${esc(c.email)}">${ic("refresh")}Sync Gmail &amp; Calendar</button>` : "";
     return `<div class="card activity">
       <div class="acthead"><h3>Activity</h3>
         <div class="meter" title="Relationship strength ${st}/100"><span style="width:${st}%" class="s-${strengthClass(st)}"></span></div>
@@ -1348,7 +1565,7 @@
         ${fu ? `<span class="pill ${fu.due ? "due" : ""}">${fu.due ? (fu.since === null ? "Reach out — never contacted" : `Overdue by ${fu.since - fu.every} day${fu.since-fu.every===1?"":"s"}`) : `Next check-in in ${fu.dueIn} day${fu.dueIn===1?"":"s"}`}</span>` : ""}
       </div>
       <div class="logbtns">
-        ${Object.entries(ITYPES).map(([k,t]) => `<button class="btn sm" data-log="${k}">${t.icon} ${t.label}</button>`).join("")}
+        ${Object.entries(ITYPES).map(([k,t]) => `<button class="btn sm" data-log="${k}">${ic(TYPE_ICON[k])}${t.label}</button>`).join("")}
         ${syncBtn}
       </div>
       <div id="syncStatus" class="note" aria-live="polite">${c.syncedAt && toDay(c.syncedAt) ? `Last synced ${agoText(toDay(c.syncedAt))}` : ""}</div>
@@ -1360,7 +1577,7 @@
         <button type="button" class="btn sm" data-act="cancelLog">Cancel</button>
       </form>
       ${items.length ? `<ul class="timeline">${items.slice(0, SHOW).map(i => `<li>
-          <span class="ti">${ITYPES[i.type].icon}</span>
+          <span class="ti t-${i.type}">${ic(TYPE_ICON[i.type])}</span>
           <div class="tb"><div><b>${ITYPES[i.type].label}</b> · <span class="muted">${fmtShort(i.date)} (${agoText(i.date)})</span>${i.source ? ` <span class="pill src">${i.source === "gmail" ? "Gmail" : "Calendar"}</span>` : ""}</div>${i.note ? `<div class="tn">${esc(i.note)}</div>` : ""}</div>
           <button class="x" data-delint="${esc(i.id)}" title="Remove" aria-label="Remove this entry">✕</button></li>`).join("")}</ul>
           ${items.length > SHOW ? `<p class="note">${items.length - SHOW} older entries not shown (they still count, and are included in JSON exports).</p>` : ""}`
@@ -1401,30 +1618,30 @@
     const person = c => `${avatar(c)}`;
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Reminders</h2>
       <p>Birthdays, anniversaries and people it's time to get back in touch with.</p></div>
-      ${mcp ? `<button class="btn" data-ract="syncAll" id="syncAllBtn">⟳ Sync all from Gmail &amp; Calendar</button>` : ""}</div>
+      ${mcp ? `<button class="btn" data-ract="syncAll" id="syncAllBtn">${ic("refresh")}Sync all from Gmail &amp; Calendar</button>` : ""}</div>
       <div id="syncAllStatus" class="note" aria-live="polite" style="margin:-8px 0 14px"></div>`;
 
-    h += `<div class="dupgroup"><div class="gh"><span>🎉</span><span class="key">Coming up · next 14 days</span><span class="n">${events.length}</span></div>`;
+    h += `<div class="dupgroup"><div class="gh"><span class="gi">${ic("gift")}</span><span class="key">Coming up · next 14 days</span><span class="n">${events.length}</span></div>`;
     h += events.length ? events.map(e => `<div class="dupitem ${e.inDays===0?"kept":""}">${person(e.c)}
-        <div class="meta"><div class="nm">${e.kind === "birthday" ? "🎂" : "💍"} ${esc(fullName(e.c))}'s ${e.kind}</div>
+        <div class="meta"><div class="nm">${ic(e.kind === "birthday" ? "cake" : "heart")} ${esc(fullName(e.c))}'s ${e.kind}</div>
           <div class="sub">${whenText(e.inDays)} · ${e.date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}${e.years > 0 && e.years < 150 ? (e.kind === "birthday" ? ` · turns ${e.years}` : ` · ${e.years} year${e.years===1?"":"s"}`) : ""}</div></div>
-        <div class="acts"><button class="btn sm" data-ract="log" data-type="message" data-id="${esc(e.c.id)}">💬 Sent wishes</button><button class="btn sm" data-ract="view" data-id="${esc(e.c.id)}">View</button></div></div>`).join("")
+        <div class="acts"><button class="btn sm" data-ract="log" data-type="message" data-id="${esc(e.c.id)}">${ic("message")}Sent wishes</button><button class="btn sm" data-ract="view" data-id="${esc(e.c.id)}">View</button></div></div>`).join("")
       : `<div class="dupitem"><div class="meta sub">No birthdays or anniversaries in the next two weeks.</div></div>`;
     h += `</div>`;
 
-    h += `<div class="dupgroup"><div class="gh"><span>⏰</span><span class="key">Time to reach out</span><span class="n">${due.length}</span></div>`;
+    h += `<div class="dupgroup"><div class="gh"><span class="gi">${ic("clock")}</span><span class="key">Time to reach out</span><span class="n">${due.length}</span></div>`;
     h += due.length ? due.map(d => `<div class="dupitem">${person(d.c)}
         <div class="meta"><div class="nm">${esc(fullName(d.c))}</div>
           <div class="sub">${d.since === null ? "Never contacted" : `Last contacted ${agoText(lastContacted(d.c))}`} · goal: ${kitLabel(d.c.keepInTouch).toLowerCase()}</div></div>
         <div class="acts">
-          <button class="btn sm" data-ract="log" data-type="call" data-id="${esc(d.c.id)}" title="Log a call today">📞 Called</button>
-          <button class="btn sm" data-ract="log" data-type="message" data-id="${esc(d.c.id)}" title="Log a message today">💬 Messaged</button>
+          <button class="btn sm" data-ract="log" data-type="call" data-id="${esc(d.c.id)}" title="Log a call today">${ic("phone")}Called</button>
+          <button class="btn sm" data-ract="log" data-type="message" data-id="${esc(d.c.id)}" title="Log a message today">${ic("message")}Messaged</button>
           <button class="btn sm" data-ract="view" data-id="${esc(d.c.id)}">View</button></div></div>`).join("")
       : `<div class="dupitem"><div class="meta sub">${tracked ? "You're up to date with everyone you're keeping in touch with. 👏" : "Set <b>Keep in touch</b> on a contact (e.g. every month) and you'll be nudged here when it's been too long."}</div></div>`;
     h += `</div>`;
 
     if (fading.length){
-      h += `<div class="dupgroup"><div class="gh"><span>📉</span><span class="key">Fading relationships</span><span class="n">${fading.length}</span></div>`;
+      h += `<div class="dupgroup"><div class="gh"><span class="gi">${ic("trend")}</span><span class="key">Fading relationships</span><span class="n">${fading.length}</span></div>`;
       h += fading.map(c => `<div class="dupitem">${person(c)}<div class="meta"><div class="nm">${esc(fullName(c))}</div>
         <div class="sub">Strength ${strength(c)}/100 · last contacted ${agoText(lastContacted(c))}</div></div>
         <div class="acts"><button class="btn sm" data-ract="kit" data-id="${esc(c.id)}">Keep in touch monthly</button><button class="btn sm" data-ract="view" data-id="${esc(c.id)}">View</button></div></div>`).join("");
@@ -1545,7 +1762,7 @@
   async function syncOne(c){
     if (!mcp || syncing) return;
     syncing = true;
-    const btn = $('[data-act="sync"]'); if (btn){ btn.disabled = true; btn.textContent = "⟳ Syncing…"; }
+    const btn = $('[data-act="sync"]'); if (btn){ btn.disabled = true; btn.innerHTML = ic("refresh") + "Syncing…"; }
     const st = $("#syncStatus"); if (st) st.textContent = "Looking for emails and meetings from the last year…";
     try {
       const { found, errors } = await fetchActivity(c, new Set());
@@ -1556,14 +1773,14 @@
       const s2 = $("#syncStatus");
       if (s2) s2.textContent = (both ? "" : `Synced — ${added} new ${added===1?"entry":"entries"} added. `) + msgs.join(" ");
       if (!both) toast(added ? `Added ${added} from Gmail & Calendar` : "Already up to date");
-    } finally { syncing = false; const b = $('[data-act="sync"]'); if (b){ b.disabled = false; b.textContent = "⟳ Sync Gmail & Calendar"; } }
+    } finally { syncing = false; const b = $('[data-act="sync"]'); if (b){ b.disabled = false; b.innerHTML = ic("refresh") + "Sync Gmail &amp; Calendar"; } }
   }
   async function syncAll(){
     if (!mcp || syncing) return;
     const list = sorted(contacts).filter(c => c.email);
     if (!list.length){ toast("No contacts with an email address"); return; }
     syncing = true; syncStop = false;
-    const btn = $("#syncAllBtn"); if (btn){ btn.dataset.ract = "stopSync"; btn.textContent = "■ Stop syncing"; }
+    const btn = $("#syncAllBtn"); if (btn){ btn.dataset.ract = "stopSync"; btn.innerHTML = ic("clock") + "Stop syncing"; }
     const status = t => { const s = $("#syncAllStatus"); if (s) s.textContent = t; };
     const skip = new Set(), notes = {}; let added = 0, done = 0;
     for (const c0 of list){
@@ -1683,7 +1900,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
       <p>Bring in people from your phone's address book, a business card or your email.</p></div></div>`;
 
     // --- device address book ---
-    h += `<div class="dupgroup scancard"><div class="gh"><span>📱</span><span class="key">Contacts on this device</span></div><div class="scanbody">`;
+    h += `<div class="dupgroup scancard"><div class="gh"><span class="gi">${ic("mobile")}</span><span class="key">Contacts on this device</span></div><div class="scanbody">`;
     if (pickerSupported()){
       h += `<p>Pick the contacts you want from your phone's address book. Nothing is shared until you choose.</p>
         <div class="row-btns"><button class="btn primary" data-sact="picker">📇 Choose from my contacts</button>
@@ -1705,7 +1922,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
 
     // --- email ---
     const m = scan.mail;
-    h += `<div class="dupgroup scancard ${scan.askMail && !m ? "ask" : ""}" id="mailCard"><div class="gh"><span>✉️</span><span class="key">People from your email</span></div><div class="scanbody">`;
+    h += `<div class="dupgroup scancard ${scan.askMail && !m ? "ask" : ""}" id="mailCard"><div class="gh"><span class="gi">${ic("mail")}</span><span class="key">People from your email</span></div><div class="scanbody">`;
     if (!mcp){
       h += `<p class="muted">Email scanning works when you open this page on claude.ai with Gmail connected.</p>`;
     } else if (!m){
@@ -1720,7 +1937,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     } else {
       h += `<p class="note" style="margin-top:0">Checked ${m.threads} sent conversation${m.threads===1?"":"s"} from the past year${m.skipped ? ` · ${m.skipped} ${m.skipped===1?"person":"people"} already in your contacts ${m.skipped===1?"was":"were"} left out` : ""}.${m.stopped ? " (Stopped early.)" : ""}</p>
         ${pickBlock("mail", m.items, scan.mailSel, `${m.items.length} people you email`)}
-        <div class="row-btns" style="margin-top:10px"><button class="btn sm" data-sact="mail-yes">⟳ Scan again</button></div>`;
+        <div class="row-btns" style="margin-top:10px"><button class="btn sm" data-sact="mail-yes">${ic("refresh")}Scan again</button></div>`;
     }
     h += `</div></div></div>`;
     const keep = [...document.querySelectorAll("#main .pickrows")].map(el => el.scrollTop), top = $("#main").scrollTop;
@@ -1944,7 +2161,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     const n = normalize({ ...draftContact(c), updatedAt: new Date().toISOString() });
     contacts = contacts.map(x => x.id === n.id ? n : x);
     closeModal($("#avatarScrim"));
-    if (inlineEdit){ const b = $("#inlineForm .avbtn"); if (b) b.innerHTML = avatar(n, "lg") + '<span class="cam" aria-hidden="true">📷</span>'; renderList(); }
+    if (inlineEdit){ const b = $("#inlineForm .avbtn"); if (b) b.innerHTML = avatar(n, "lg") + `<span class="cam" aria-hidden="true">${ic("camera")}</span>`; renderList(); }
     else render();
     await persist(n);
     let stored = true;
@@ -1957,6 +2174,45 @@ address = one line. Do not invent anything that is not visible on the card. If t
     e.preventDefault(); e.stopPropagation();
     const c = contacts.find(x => x.id === selectedId); if (c) openAvatar(c);
   }, true);
+
+  // ---------- overview (shown when no contact is selected) ----------
+  function overviewHTML(){
+    const { events, due } = reminderData();
+    const favs = contacts.filter(c => c.favorite).length;
+    const recent = [...contacts].sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 5);
+    const touched = contacts.filter(c => lastContacted(c)).sort((a,b) => lastContacted(b).localeCompare(lastContacted(a))).slice(0, 5);
+    const tile = (n, label, sub, go, tone = "") => `<button type="button" class="tile ${tone}" ${go ? `data-go="${go}"` : "disabled"}><span class="tn">${n.toLocaleString()}</span><span class="tl">${label}</span>${sub ? `<span class="ts">${sub}</span>` : ""}</button>`;
+    const prow = (c, sub, right = "") => `<a href="#" class="prow" data-goto="${esc(c.id)}">${avatar(c)}<span class="meta"><span class="nm">${esc(fullName(c))}</span><span class="sub">${sub}</span></span>${right}</a>`;
+    return `<div class="overview">
+      <div class="ovhead"><h2>Address book</h2><p>${contacts.length.toLocaleString()} people · pick someone from the list, or start with what needs you today.</p></div>
+      <div class="tiles">
+        ${tile(contacts.length, "Contacts", favs ? `${favs} favorite${favs===1?"":"s"}` : "", "")}
+        ${tile(events.length, "Coming up", "birthdays & anniversaries, 14 days", "reminders", events.length ? "warm" : "")}
+        ${tile(due.length, "To reach out", "past their keep-in-touch goal", "reminders", due.length ? "alert" : "")}
+        ${tile(contacts.filter(c => (c.interactions||[]).length).length, "Tracked", "with logged activity", "")}
+      </div>
+      <div class="ovcols">
+        <section class="ovcard"><h3>${ic("gift")}Coming up</h3>
+          ${events.length ? events.slice(0, 5).map(e => prow(e.c, `${e.kind === "birthday" ? "Birthday" : "Anniversary"} · ${whenText(e.inDays).toLowerCase()}`, `<span class="pill ${e.inDays <= 1 ? "soon" : ""}">${e.date.toLocaleDateString(undefined,{month:"short",day:"numeric"})}</span>`)).join("") : `<p class="muted small">Nothing in the next two weeks.</p>`}
+        </section>
+        <section class="ovcard"><h3>${ic("clock")}Recently in touch</h3>
+          ${touched.length ? touched.map(c => prow(c, `${ITYPES[c.interactions[0].type].label} · ${agoText(lastContacted(c))}`)).join("") : `<p class="muted small">Log a call, email or meeting on a contact to see it here.</p>`}
+        </section>
+        <section class="ovcard"><h3>${ic("plus")}Recently added</h3>
+          ${recent.map(c => prow(c, esc(c.phone || c.email || c.company || "No details yet"))).join("")}
+        </section>
+      </div>
+    </div>`;
+  }
+  $("#main").addEventListener("click", e => {
+    const t = e.target.closest("[data-go]"); if (!t) return;
+    setView(t.dataset.go); render(); $("#main").scrollTop = 0;
+  });
+  $("#az").addEventListener("click", e => {
+    const b = e.target.closest("[data-az]"); if (!b || b.disabled) return;
+    const g = $("#list").querySelector(`.group[data-letter="${b.dataset.az}"]`);
+    if (g) $("#list").scrollTo({ top: g.offsetTop - $("#list").offsetTop, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  });
 
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
