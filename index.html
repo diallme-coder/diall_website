@@ -229,6 +229,15 @@
   }
   @media (max-width:480px){ .bottomnav .full{display:none} .bottomnav .short{display:inline} }
   .toast{bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))}
+  /* processing bar: sits on top of the bottom nav while a command runs */
+  .busy{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:45;background:var(--panel);border-top:1px solid var(--line);padding:8px 16px 9px;display:none;flex-direction:column;gap:6px;box-shadow:0 -2px 12px rgba(16,24,40,.08)}
+  .busy.show{display:flex}
+  .busy span{font-size:13px;font-weight:600;color:var(--ink)}
+  .busybar{height:4px;border-radius:999px;background:var(--line);overflow:hidden;position:relative}
+  .busybar::after{content:"";position:absolute;top:0;left:-40%;width:40%;height:100%;background:var(--ok);border-radius:999px;animation:busyslide 1.1s ease-in-out infinite}
+  @keyframes busyslide{from{left:-40%}to{left:100%}}
+  .busy.show ~ .toast{bottom:calc(var(--nav-h) + 56px + env(safe-area-inset-bottom))}
+  @media (prefers-reduced-motion:reduce){ .busybar::after{animation:none;left:0;width:100%;opacity:.5} }
   /* duplicates view */
   .dupwrap{max-width:880px;margin:0 auto;padding:24px 20px 40px}
   .duphead{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
@@ -867,6 +876,7 @@
   </div>
 </div>
 
+<div class="busy" id="busy" role="status" aria-live="polite"><span id="busyTxt">Working…</span><div class="busybar"></div></div>
 <div class="toast" id="toast"></div>
 <datalist id="contactNames"></datalist>
 <datalist id="categoryList"></datalist>
@@ -989,6 +999,13 @@
     t.classList.add("show"); clearTimeout(toast._t);
     toast._t = setTimeout(() => t.classList.remove("show"), action ? 6000 : 2400);
   }
+
+  // processing bar: busyStart/busyEnd nest, so overlapping commands keep it visible until all finish
+  let busyN = 0;
+  function busyStart(label){ busyN++; busySet(label); $("#busy").classList.add("show"); }
+  function busySet(label){ $("#busyTxt").textContent = label; }
+  function busyEnd(){ busyN = Math.max(0, busyN - 1); if (!busyN) $("#busy").classList.remove("show"); }
+  async function withBusy(label, fn){ busyStart(label); try { return await fn(); } finally { busyEnd(); } }
 
   // ---------- structured address: addr {line1,line2,city,state,zip}; `address` stays the composed display line ----------
   const ADDR_CAP = { line1: 120, line2: 120, city: 120, state: 40, zip: 12 };
@@ -1784,7 +1801,7 @@
       const keep = p.group.items.find(c => c.id === p.keepId);
       const rp = mergeRowsPlan([p])[0] || { rows: [], dropped: 0 };
       confirmMerge(p.group.items.filter(c => c.id !== p.keepId), fullName(keep), { extra: rowsPreview(rp) })
-        .then(ok => ok && runMerges([p]));
+        .then(ok => ok && withBusy("Merging contacts…", () => runMerges([p])));
       return;
     }
     if (act === "mergeAll"){
@@ -1794,7 +1811,7 @@
       const rps = mergeRowsPlan(plans);
       const gone = plans.flatMap(p => p.group.items.filter(c => c.id !== p.keepId));
       confirmMerge(gone, "", { text: `<b>${plans.length}</b> groups (<b>${gone.length}</b> contacts) will be merged, each into the contact marked Keep. Every number, email and note is kept, and the originals are saved under Merged originals so you can restore them.`, extra: `${rowsPreview({ rows: rps.flatMap(g => g.rows), dropped: rps.reduce((s,g) => s + g.dropped, 0) })}` })
-        .then(ok => ok && runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
+        .then(ok => ok && withBusy(`Merging ${plans.length} group${plans.length === 1 ? "" : "s"}…`, () => runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds})))));
     }
   }
 
@@ -2513,7 +2530,8 @@
       if (!(await confirmDeletion(gone))) return;
     }
     $("#doImport").disabled = true;
-    await shrinkPhotos(toAdd, n => { $("#doImport").textContent = `Preparing photos… ${n}`; });
+    busyStart(`Importing ${toAdd.length} contact${toAdd.length === 1 ? "" : "s"}…`);
+    await shrinkPhotos(toAdd, n => busySet(`Preparing photos… ${n}`));
     // replaced: the incoming contact takes the existing contact's slot; the original goes to Recently deleted (same shape trashContacts makes)
     const swap = new Map(), origs = [], binned = [], now = new Date().toISOString();
     for (const c of toAdd) if (repl.has(c)){ const ex = found.get(c); swap.set(ex.id, c); origs.push(ex); binned.push(normalize({ ...ex, deletedAt: now })); }
@@ -2534,6 +2552,7 @@
         if (backend === "local") saveLocal();
       } else saveLocal();
     });
+    busyEnd();
     const ids = new Set(toAdd.map(c => c.id));
     const back = new Map(origs.map(o => [swap.get(o.id).id, o])), nRep = origs.length;
     toast(`Imported ${toAdd.length}${nRep ? `, deleted current ${nRep}` : ""}${delNew ? `, deleted new ${delNew}` : ""}`, { label: "Undo", run: async () => {
@@ -3448,7 +3467,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
             const rp = mergeRowsPlan([{ keepId, removeIds }])[0] || { rows: [], dropped: 0 };
             if (!(await confirmMerge(gone, fullName(keep), { extra: rowsPreview(rp) }))) return false;
             exitSelect();
-            await runMerges([{ keepId, removeIds }]);
+            await withBusy("Merging contacts…", () => runMerges([{ keepId, removeIds }]));
             selectedId = keepId; setView("contacts"); render();
           });
         break;
@@ -3964,7 +3983,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
       for (const [inc, ex] of found) if (!seen.has(ex)){ seen.add(ex); items.push([inc, ex]); }
       if (!items.length){ toast("No exact matches found in this file"); return; }
       const chosen = await askFileMatches(items);   // nothing is written before this resolves
-      if (chosen && chosen.length && await confirmDeletion(chosen)) await deleteMatchedContacts(chosen);
+      if (chosen && chosen.length && await confirmDeletion(chosen)) await withBusy("Deleting matched contacts…", () => deleteMatchedContacts(chosen));
     };
     r.readAsText(file);
   }
