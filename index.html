@@ -275,8 +275,9 @@
   .emlist li:last-child{border-bottom:0}
   .emlist .nm{font-weight:600;overflow-wrap:anywhere}
   .emlist .ad{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-  .ccrefresh{margin-top:14px}
-  @media (max-width:560px){ .ccrefresh .btn{width:100%;justify-content:center} }
+  .ccrefresh{margin-top:14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+  .ccok{color:var(--ok);font-size:14px;font-weight:600}
+  @media (max-width:560px){ .ccrefresh .btn{flex:1 1 100%;justify-content:center} }
   @media (max-width:560px){ .dupitem{flex-wrap:wrap} .dupitem .acts{width:100%;justify-content:flex-end} .dupwrap{padding:18px 14px 30px} }
   @media (max-width:760px){
     .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -1371,7 +1372,9 @@
   let ccQuery = "", ccPreview = false, ccMemo = null;
   // returns { n: corrected number, minus: bool, rule: index|-1 }
   function ccFix(raw){
-    let n = String(raw || "").trim(), minus = false, rule = -1, plus1 = false;
+    let n = String(raw || "").trim(), minus = false, rule = -1, plus1 = false, paren = false, space = false;
+    const pr = n.replace(/[()]/g, ""); if (pr !== n){ paren = true; n = pr; }
+    const sp = n.replace(/(?<=\d) (?=\d)/g, ""); if (sp !== n){ space = true; n = sp; }
     const m = n.replace(/(?<=\d)-(?=\d)/g, ""); if (m !== n){ minus = true; n = m; }
     if (n[0] === "1" && n.indexOf("+") < 0 && n.replace(/\D/g, "").length === 11){ n = "+" + n; plus1 = true; }   // 11 digits starting with 1, no "+": add "+"
     for (let i = 0; i < CC_RULES.length; i++){
@@ -1379,7 +1382,7 @@
       while (j < n.length && k < pre.length){ const ch = n[j]; if (ch === pre[k]) k++; else if (ch !== " " && ch !== ".") break; j++; }
       if (k === pre.length){ n = CC_RULES[i][1] + n.slice(j); rule = i; break; }
     }
-    return { n, minus, rule, plus1 };
+    return { n, minus, rule, plus1, paren, space };
   }
   // why a number is in the wrong format ("" when it is correct)
   function ccWhy(n){
@@ -1404,7 +1407,7 @@
   }
   function ccAnalyze(){
     if (ccMemo && ccMemo.ver === dataVer && ccMemo.ref === contacts) return ccMemo;
-    const cnt = [0, 0, 0, 0, 0, 0], changes = [], bad = [];   // cnt: minus, 00213, 00224, 001, 00221 (display order), then add-plus-1
+    const cnt = [0, 0, 0, 0, 0, 0, 0, 0], changes = [], bad = [];   // cnt: minus, 00213, 00224, 001, 00221 (display order), add-plus-1, parentheses, spaces
     const slot = [1, 2, 4, 3];
     for (const c of contacts){
       const nm = fullName(c);
@@ -1414,6 +1417,8 @@
         if (f.n !== String(num)){
           if (f.minus) cnt[0]++;
           if (f.plus1) cnt[5]++;
+          if (f.paren) cnt[6]++;
+          if (f.space) cnt[7]++;
           if (f.rule >= 0) cnt[slot[f.rule]]++;
           changes.push({ c, nm, idx, label, old: num, n: f.n });
         }
@@ -1430,7 +1435,7 @@
     const a = ccAnalyze(), q = ccQuery.toLowerCase().trim();
     const rows = q ? a.bad.filter(b => (b.nm + " " + b.stored).toLowerCase().includes(q)) : a.bad;
     const N = a.changes.length, nc = new Set(a.changes.map(x => x.c.id)).size;
-    const L = ["Remove minus signs", "00213 → +213", "00224 → +224", "001 → +1", "00221 → +221", "Add + before 1 (11 digits)"];
+    const L = ["Remove minus signs", "00213 → +213", "00224 → +224", "001 → +1", "00221 → +221", "Add + before 1 (11 digits)", "Remove parentheses", "Remove spaces between digits"];
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Country fix</h2><p>Numbers should look like +&lt;country code&gt;&lt;number&gt;, 7 to 15 digits.</p></div></div>
       <div class="card"><h3 style="margin:12px 0 0">Auto-correct</h3>
       <ul class="ccrules">${L.map((l, i) => `<li><span>${l}</span><b>${a.cnt[i]}</b></li>`).join("")}</ul>
@@ -1445,7 +1450,7 @@
       <div class="stored">${esc(b.stored)}</div><div class="why">${esc(b.why)}${b.sugg ? ` · suggested ${esc(b.sugg)}` : ""}</div>
       <div class="ed"><input class="cc-in" type="text" inputmode="tel" aria-label="Corrected number" value="${esc(b.sugg || b.fixed)}"><button class="btn sm primary" data-cc="save">Save</button><button class="btn sm danger" data-cc="remove">Remove</button></div></div>`).join("");
     if (rows.length > 300) h += `<p style="padding:8px 18px 14px;margin:0;color:var(--muted);font-size:13px">Showing 300 of ${rows.length}. Fix some, or filter to see the rest.</p>`;
-    h += `</div><div class="ccrefresh"><button class="btn" data-cc="refresh">Refresh</button></div></div>`;
+    h += `</div><div class="ccrefresh"><button class="btn" data-cc="refresh">Refresh</button>${N === 0 && !a.bad.length ? `<span class="ccok" role="status">All contacts are correct</span>` : ""}</div></div>`;
     const hadFocus = document.activeElement?.id === "ccSearch", top = $("#main").scrollTop;
     $("#main").innerHTML = h;
     $("#main").scrollTop = top;
