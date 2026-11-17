@@ -1371,14 +1371,15 @@
   let ccQuery = "", ccPreview = false, ccMemo = null;
   // returns { n: corrected number, minus: bool, rule: index|-1 }
   function ccFix(raw){
-    let n = String(raw || "").trim(), minus = false, rule = -1;
+    let n = String(raw || "").trim(), minus = false, rule = -1, plus1 = false;
     const m = n.replace(/(?<=\d)-(?=\d)/g, ""); if (m !== n){ minus = true; n = m; }
+    if (n[0] === "1" && n.indexOf("+") < 0 && n.replace(/\D/g, "").length === 11){ n = "+" + n; plus1 = true; }   // 11 digits starting with 1, no "+": add "+"
     for (let i = 0; i < CC_RULES.length; i++){
       const pre = CC_RULES[i][0]; let k = 0, j = 0;
       while (j < n.length && k < pre.length){ const ch = n[j]; if (ch === pre[k]) k++; else if (ch !== " " && ch !== ".") break; j++; }
       if (k === pre.length){ n = CC_RULES[i][1] + n.slice(j); rule = i; break; }
     }
-    return { n, minus, rule };
+    return { n, minus, rule, plus1 };
   }
   // why a number is in the wrong format ("" when it is correct)
   function ccWhy(n){
@@ -1403,7 +1404,7 @@
   }
   function ccAnalyze(){
     if (ccMemo && ccMemo.ver === dataVer && ccMemo.ref === contacts) return ccMemo;
-    const cnt = [0, 0, 0, 0, 0], changes = [], bad = [];   // cnt: minus, 00213, 00224, 001, 00221 (display order)
+    const cnt = [0, 0, 0, 0, 0, 0], changes = [], bad = [];   // cnt: minus, 00213, 00224, 001, 00221 (display order), then add-plus-1
     const slot = [1, 2, 4, 3];
     for (const c of contacts){
       const nm = fullName(c);
@@ -1412,6 +1413,7 @@
         const f = ccFix(num);
         if (f.n !== String(num)){
           if (f.minus) cnt[0]++;
+          if (f.plus1) cnt[5]++;
           if (f.rule >= 0) cnt[slot[f.rule]]++;
           changes.push({ c, nm, idx, label, old: num, n: f.n });
         }
@@ -1428,7 +1430,7 @@
     const a = ccAnalyze(), q = ccQuery.toLowerCase().trim();
     const rows = q ? a.bad.filter(b => (b.nm + " " + b.stored).toLowerCase().includes(q)) : a.bad;
     const N = a.changes.length, nc = new Set(a.changes.map(x => x.c.id)).size;
-    const L = ["Remove minus signs", "00213 → +213", "00224 → +224", "001 → +1", "00221 → +221"];
+    const L = ["Remove minus signs", "00213 → +213", "00224 → +224", "001 → +1", "00221 → +221", "Add + before 1 (11 digits)"];
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Country fix</h2><p>Numbers should look like +&lt;country code&gt;&lt;number&gt;, 7 to 15 digits.</p></div></div>
       <div class="card"><h3 style="margin:12px 0 0">Auto-correct</h3>
       <ul class="ccrules">${L.map((l, i) => `<li><span>${l}</span><b>${a.cnt[i]}</b></li>`).join("")}</ul>
