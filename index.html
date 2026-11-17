@@ -493,7 +493,7 @@
     .avatar.lg{width:76px;height:76px;font-size:28px}
     .actions .spacer{display:none}
     .row{grid-template-columns:1fr;gap:4px}
-    header.top{padding:10px 14px}
+    header.top{padding:10px 14px;gap:4px}
     header.top h1{font-size:23px}
     .btn.icon{width:34px}
   }
@@ -672,6 +672,8 @@
     <div class="spacer"></div>
     <button class="btn" id="scanBtn" title="Scan a business card" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2M14 10h4M14 13h3"/></svg><span class="lbl">Scan card</span></button>
     <button class="btn" id="importBtn" title="Import contacts"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span class="lbl">Import</span></button>
+    <button class="btn" id="findMatchesBtn" title="Find matches in file"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="lbl">Find matches in file</span></button>
+    <input type="file" id="findMatchesFile" accept=".vcf,.vcard,.csv,.txt,text/vcard,text/csv" hidden>
     <button class="btn" id="exportAllBtn" title="Export all contacts"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg><span class="lbl">Export</span></button>
     <button class="btn primary" id="addBtn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">New contact</span></button>
   </header>
@@ -3793,6 +3795,78 @@ address = one line. Do not invent anything that is not visible on the card. If t
       msg(`Your device's share menu can't open from inside this page.${one ? " Use the <b>QR code</b> — the other phone just scans it — or" : " Use"} WhatsApp, email or Copy above. To beam it over Bluetooth or Wi-Fi, open this app directly in your phone's browser (for example from your GitHub page) and tap <b>Nearby &amp; apps</b> there.`);
     }
   });
+
+  // ---------- Find matches in file: delete existing contacts that exactly match a file's contacts; imports nothing ----------
+  function askFileMatches(items){
+    return new Promise(res => {
+      const sc = $("#matchScrim"), n = items.length; let done = false;
+      const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
+      const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin(null); });
+      const line = (c, h) => `<div style="min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><div class="note" style="margin:0 0 4px">${h}</div><b style="overflow-wrap:anywhere">${esc(fullName(c))}</b><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc((phoneList(c)[0] || {}).number || c.phone || "No number")}</div><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc(emailList(c)[0] || "No email")}</div><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc(cmpAddrStr(c) ? (c.address || composeAddr(c.addr)) : "No address")}</div></div>`;
+      const del = new Set(); let i = -1;
+      $("#matchTitle").textContent = "Matches found";
+      $("#matchBody").innerHTML = `<p style="margin:0">${n} existing contact${n===1?" matches":"s match"} this file exactly.</p><p class="note">Nothing is imported. Deleted contacts go to Recently deleted and can be restored for 30 days.</p>`;
+      $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel</button><button type="button" class="btn" data-m="review">Review one by one</button><button type="button" class="btn primary" data-m="all">Delete all matches</button>`;
+      $("#matchFoot").onclick = e => {
+        const b = e.target.closest("[data-m]"); if (!b) return;
+        const m = b.dataset.m;
+        if (m === "cancel") return fin(null);
+        if (m === "all") return fin(items.map(x => x[1]));
+        if (m === "review"){ i = 0; }
+        else { if (m === "del") del.add(items[i][1]); if (++i >= n) return fin([...del]); }
+        const [inc, ex] = items[i];
+        $("#matchTitle").textContent = `${i+1} of ${n}`;
+        $("#matchBody").innerHTML = `<div class="matchcmp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${line(ex, "Existing contact")}${line(inc, "In file")}</div>`;
+        $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="stop">Cancel review</button><button type="button" class="btn" data-m="keep">Keep it</button><button type="button" class="btn primary" data-m="del">Delete this one</button>`;
+        if (m === "stop") fin([...del]);
+      };
+      openModal("#matchScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
+    });
+  }
+  function readMatchFile(file){
+    if (!file) return;
+    if (file.size > 10*1024*1024){ toast("That file is over 10 MB."); return; }
+    const r = new FileReader();
+    r.onerror = () => toast("Couldn't read that file.");
+    r.onload = async () => {
+      let list;
+      try { list = parseAny(String(r.result), file.name); }
+      catch(e){ toast(e.message || "Couldn't read that data."); return; }
+      list = list.map(x => { const { id, createdAt, updatedAt, ...rest } = x; return normalize({ ...rest, id: undefined }); })
+                 .filter(c => c.firstName || c.lastName || c.company || c.phone || c.email);
+      const found = findExactMatches(list), seen = new Set(), items = [];
+      for (const [inc, ex] of found) if (!seen.has(ex)){ seen.add(ex); items.push([inc, ex]); }
+      if (!items.length){ toast("No exact matches found in this file"); return; }
+      const chosen = await askFileMatches(items);   // nothing is written before this resolves
+      if (chosen && chosen.length) await deleteMatchedContacts(chosen);
+    };
+    r.readAsText(file);
+  }
+  async function deleteMatchedContacts(list){
+    const ids = new Set(list.map(c => c.id)), now = new Date().toISOString();
+    const pos = new Map(); contacts.forEach((c, i) => { if (ids.has(c.id)) pos.set(c.id, i); });
+    const origs = contacts.filter(c => ids.has(c.id));
+    if (!origs.length) return;
+    const binned = origs.map(c => normalize({ ...c, deletedAt: now }));
+    contacts = contacts.filter(c => !ids.has(c.id));
+    trash = binned.concat(trash);
+    if (ids.has(selectedId)) selectedId = null;
+    dataVer++; nameCache.clear(); render();
+    await batchSaves(async () => { for (const c of binned) await persist(c); });
+    const n = origs.length;
+    toast(`Deleted ${n} existing contact${n===1?"":"s"}`, { label: "Undo", run: async () => {
+      const bid = new Set(binned.map(c => c.id));
+      trash = trash.filter(c => !bid.has(c.id));
+      const next = contacts.slice();
+      origs.slice().sort((a, b) => pos.get(a.id) - pos.get(b.id)).forEach(o => next.splice(Math.min(pos.get(o.id), next.length), 0, o));
+      contacts = next;
+      dataVer++; nameCache.clear(); render();
+      await batchSaves(async () => { for (const o of origs) await persist(o); });
+      toast(`Restored ${n} contact${n===1?"":"s"}`);
+    } });
+  }
+  $("#findMatchesBtn").addEventListener("click", () => { $("#findMatchesFile").value = ""; $("#findMatchesFile").click(); });
+  $("#findMatchesFile").addEventListener("change", e => readMatchFile(e.target.files[0]));
 
   // ---------- events ----------
   $("#addBtn").addEventListener("click", () => leaveInline(() => { renderMain(); openEdit(null); }));
