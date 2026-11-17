@@ -899,6 +899,9 @@
   let contacts = [];         // active contacts
   let trash = [];            // deleted contacts, kept 30 days (each has deletedAt)
   const TRASH_DAYS = 30;
+  // Merged archive: originals of contacts merged by duplicate processing -> [{mergedAt, keptId, source, afterId}]. Separate from trash; never expires.
+  const MERGED_KEY = "contact-manager.merged";
+  let merged = [], mergedDirty = false;
   let selectedId = null;
   let query = "";
   let filter = "all";        // all | fav | tag:<name>
@@ -1059,7 +1062,13 @@
   // ---------- persistence ----------
   // dataVer bumps whenever contacts/trash change or are saved; derived-data caches key on it.
   let dataVer = 0, saveDepth = 0, savePending = false;
-  function writeLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(contacts.concat(trash))); } catch(e){} }
+  function writeLocal(){
+    try { localStorage.setItem(LS_KEY, JSON.stringify(contacts.concat(trash))); } catch(e){}
+    if (mergedDirty){ mergedDirty = false; try { localStorage.setItem(MERGED_KEY, JSON.stringify(merged)); } catch(e){} }
+  }
+  function loadMerged(){ try { const v = JSON.parse(localStorage.getItem(MERGED_KEY) || "[]"); return Array.isArray(v) ? v.filter(r => r && r.source && r.source.id) : []; } catch(e){ return []; } }
+  // archive write: rides along with the next live-contacts write (one flush inside batchSaves); the account backend keeps the archive in this browser
+  function saveMerged(){ mergedDirty = true; if (backend === "db"){ writeLocal(); dataVer++; } else saveLocal(); }
   function saveLocal(){ dataVer++; if (saveDepth){ savePending = true; return; } writeLocal(); }
   // run fn with localStorage writes coalesced into one flush at the end (even if fn throws)
   async function batchSaves(fn){
@@ -1098,6 +1107,7 @@
   }
 
   async function initStorage(){
+    merged = loadMerged();
     splitAll(loadLocal());
     purgeTrash();
     setStore("loading");
@@ -1569,6 +1579,7 @@
       ? `${all.length} group${all.length===1?"":"s"} · ${extra} extra contact${extra===1?"":"s"} can be merged`
       : (isPhone ? "Contacts sharing the same phone number appear here." : "Contacts with the same name appear here — and look-alikes such as “J. Smith” and “John Smith” when their email matches.");
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>${title}</h2><p>${sub}</p></div>
+      <button class="btn" data-dact="viewMerged">View merged originals${merged.length ? ` (${merged.length})` : ""}</button>
       ${all.length > 1 ? `<button class="btn primary" data-dact="mergeAll">Merge all ${all.length} groups</button>` : ""}</div>`;
     { const ep = emPlanCached(); if (ep.length) h += `<div class="embar" role="status"><span class="t">${ic("mail")}<span>${ep.length} contact${ep.length === 1 ? " has" : "s have"} email addresses in notes</span></span><button class="btn sm primary" data-dact="emReview">Review and move</button></div>`; }
     if (!all.length){
@@ -1600,7 +1611,7 @@
       }
       h += `</div>`;
     }
-    h += `<p class="note">Merging keeps the contact marked <b>Keep</b>, fills its empty fields from the others, combines tags and notes, saves any different email into its notes, adds each different phone number as its own row under it (“Name 2”, “Name 3”…), and deletes the rest.</p></div>`;
+    h += `<p class="note">Merging keeps the contact marked <b>Keep</b>, fills its empty fields from the others, combines tags and notes, saves any different email into its notes, adds each different phone number as its own row under it (“Name 2”, “Name 3”…), and keeps the other originals in <b>Merged originals</b> so you can restore them.</p></div>`;
     const hadFocus = document.activeElement?.id === "dupSearch";
     $("#main").innerHTML = h;
     if (hadFocus){ const s = $("#dupSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
@@ -1655,32 +1666,99 @@
     return out;
   }
 
-  async function runMerges(plan){   // plan: [{keepId, removeIds}]
-    const snapC = JSON.parse(JSON.stringify(contacts)), snapT = JSON.parse(JSON.stringify(trash));
+  async function runMerges(plan){   // plan: [{keepId, removeIds}]. Merges never touch Recently deleted: sources go to the Merged archive.
+    const snapC = JSON.parse(JSON.stringify(contacts)), snapM = JSON.parse(JSON.stringify(merged));
     const rp = mergeRowsPlan(plan);
-    const merged = [], removed = [], gone = [], newRows = []; let dropped = 0;
+    const kept = [], removed = [], newRows = [], recs = []; let dropped = 0;
     const now = new Date().toISOString();
+    const pos = new Map(contacts.map((c, i) => [c.id, i]));
     for (const g of rp){
       const m = mergeContacts(g.keep, g.others), ids = g.others.map(c => c.id);
       const rows = g.rows.map(sp => normalize({ ...sp, id: undefined, createdAt: now, updatedAt: now }));
+      for (const o of g.others){ const i = pos.get(o.id); recs.push({ mergedAt: now, keptId: m.id, source: JSON.parse(JSON.stringify(o)), afterId: i > 0 ? contacts[i - 1].id : "" }); }
       const out = [];
       for (const c of contacts){ if (ids.includes(c.id)) continue; if (c.id === m.id){ out.push(m, ...rows); } else out.push(c); }
       contacts = out;
-      merged.push(m); removed.push(...ids); gone.push(...g.others); newRows.push(...rows); dropped += g.dropped;
+      kept.push(m); removed.push(...ids); newRows.push(...rows); dropped += g.dropped;
     }
-    if (!merged.length) return;
-    const binned = gone.map(c => normalize({ ...c, deletedAt: now, mergedInto: undefined }));
-    trash = trash.concat(binned);
+    if (!kept.length) return;
+    merged = merged.concat(recs);
+    if (removed.includes(selectedId)) selectedId = null;
     dataVer++; nameCache.clear();
     render();
-    await batchSaves(async () => { for (const m of merged) await persist(m); for (const r of newRows) await persist(r); for (const c of binned) await persist(c); });
-    toast(`Merged ${removed.length + merged.length} contacts into ${merged.length} · ${newRows.length} number row${newRows.length === 1 ? "" : "s"} created${dropped ? `, ${dropped} duplicate number${dropped === 1 ? "" : "s"} skipped` : ""}`, { label: "Undo", run: async () => {
-      const cur = new Map(contacts.concat(trash).map(c => [c.id, JSON.stringify(c)]));
-      const back = snapC.concat(snapT).filter(c => cur.get(c.id) !== JSON.stringify(c));
-      contacts = snapC; trash = snapT; dataVer++; nameCache.clear(); render();
-      await batchSaves(async () => { for (const c of back) await persist(c); for (const r of newRows) await removeStored(r.id); });
+    await batchSaves(async () => { saveMerged(); for (const m of kept) await persist(m); for (const r of newRows) await persist(r); for (const id of removed) await removeStored(id); });
+    toast(`Merged ${removed.length + kept.length} contacts into ${kept.length} · ${newRows.length} number row${newRows.length === 1 ? "" : "s"} created${dropped ? `, ${dropped} duplicate number${dropped === 1 ? "" : "s"} skipped` : ""}`, { label: "Undo", run: async () => {
+      const cur = new Map(contacts.map(c => [c.id, JSON.stringify(c)]));
+      const back = snapC.filter(c => cur.get(c.id) !== JSON.stringify(c));
+      contacts = snapC; merged = snapM; dataVer++; nameCache.clear(); render();
+      await batchSaves(async () => { saveMerged(); for (const c of back) await persist(c); for (const r of newRows) await removeStored(r.id); });
       toast("Undone");
     } });
+  }
+
+  // put archived originals back into the live list (at their old spot when it can be found, else at the end); the kept contact and its rows are not touched
+  async function restoreMerged(ids){
+    const set = new Set(ids), back = [];
+    const anchor = id => { const seen = new Set(); while (id !== "" && id != null && !seen.has(id)){ seen.add(id); if (contacts.some(c => c.id === id)) return id; const r = merged.find(x => x.source.id === id); id = r ? r.afterId : null; } return id === "" ? "" : null; };
+    for (const rec of merged.filter(r => set.has(r.source.id))){
+      merged = merged.filter(r => r !== rec);
+      const taken = contacts.some(c => c.id === rec.source.id) || trash.some(c => c.id === rec.source.id);
+      const r = normalize({ ...rec.source, id: taken ? undefined : rec.source.id, updatedAt: new Date().toISOString() });
+      const a = anchor(rec.afterId), list = contacts.slice();
+      list.splice(a === "" ? 0 : a === null ? list.length : list.findIndex(c => c.id === a) + 1, 0, r);
+      contacts = list; back.push(r);
+    }
+    if (!back.length) return;
+    dataVer++; nameCache.clear(); render();
+    await batchSaves(async () => { saveMerged(); for (const c of back) await persist(c); });
+    toast(`Restored ${back.length === 1 ? fullName(back[0]) : back.length.toLocaleString() + " contacts"}. The kept contact and its number rows were not changed.`);
+  }
+  function renderMerged(){
+    $("#app").classList.remove("viewing");
+    let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Merged originals</h2>
+      <p>Contacts combined by duplicate merging are kept here. Restoring one puts the original back; the kept contact and its number rows stay as they are.</p></div>
+      <button class="btn" data-mact="back">Back to duplicates</button>${merged.length ? `<button class="btn primary" data-mact="restoreAll">${ic("refresh")}Restore all</button>` : ""}</div>`;
+    if (!merged.length){
+      h += `<div class="card" style="text-align:center;padding:40px 20px"><div class="emptyart">${ic("archive")}</div>
+        <h3 style="margin:14px 0 4px">Nothing merged yet</h3><p class="muted" style="margin:0">Originals appear here after you merge duplicates.</p></div></div>`;
+      $("#main").innerHTML = h; return;
+    }
+    h += `<div class="dupgroup"><div class="gh"><span class="gi">${ic("archive")}</span><span class="key">${merged.length.toLocaleString()} merged original${merged.length===1?"":"s"}</span></div>`;
+    h += merged.map(r => {
+      const c = r.source, k = contacts.find(x => x.id === r.keptId);
+      return `<div class="dupitem">${avatar(c)}
+        <div class="meta"><div class="nm">${esc(fullName(c))}</div>
+          <div class="sub">Merged ${esc(new Date(r.mergedAt).toLocaleDateString())} into ${k ? `<b>${esc(fullName(k))}</b>` : "a contact that no longer exists"}${phoneList(c).length ? ` · ${esc(phoneList(c).map(p => p.number).join(", "))}` : ""}${c.email ? ` · ${esc(c.email)}` : ""}</div></div>
+        <div class="acts"><button class="btn sm primary" data-mact="restore" data-id="${esc(c.id)}">${ic("refresh")}Restore</button></div></div>`;
+    }).join("");
+    h += `</div></div>`;
+    $("#main").innerHTML = h;
+  }
+  let mergedBack = "dup-phone";
+  $("#main").addEventListener("click", e => {
+    const b = e.target.closest("[data-mact]"); if (!b || view !== "merged") return;
+    const a = b.dataset.mact;
+    if (a === "restore") restoreMerged([b.dataset.id]);
+    else if (a === "restoreAll") restoreMerged(merged.map(r => r.source.id));
+    else if (a === "back"){ setView(mergedBack); render(); $("#main").scrollTop = 0; }
+  });
+
+  // Yes/No dialog for a merge (same scrim as deletions, merge wording; nothing is deleted)
+  function confirmMerge(list, keepName, opts = {}){
+    return new Promise(res => {
+      const sc = $("#delScrim"), yes = $("#delYes"), title = $("#delTitle"), n = list.length; let done = false;
+      const saved = { t: title.textContent, y: yes.textContent, bg: yes.style.background, bc: yes.style.borderColor };
+      const fin = v => { if (done) return; done = true; mo.disconnect(); yes.onclick = $("#delNo").onclick = null; closeModal(sc); title.textContent = saved.t; yes.textContent = saved.y; yes.style.background = saved.bg; yes.style.borderColor = saved.bc; res(v); };
+      const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin(false); });
+      title.textContent = "Merge contacts"; yes.textContent = "Yes, merge"; yes.style.background = ""; yes.style.borderColor = "";
+      $("#delMsg").innerHTML = opts.text || `<b>${n.toLocaleString()}</b> contact${n === 1 ? "" : "s"} will be merged into <b>${esc(keepName)}</b>. Every number, email and note is kept, and the originals are saved under Merged originals so you can restore them.`;
+      $("#delList").innerHTML = opts.text ? "" : list.slice(0, 10).map(c => `<li>${esc(fullName(c))}</li>`).join("") + (n > 10 ? `<li style="list-style:none;margin-left:-18px">and ${(n - 10).toLocaleString()} more</li>` : "");
+      $("#delExtra").innerHTML = opts.extra || "";
+      $("#delNo").onclick = () => fin(false);
+      yes.onclick = () => fin(true);
+      openModal("#delScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
+      $("#delNo").focus();
+    });
   }
 
   function planFor(gk){
@@ -1700,11 +1778,12 @@
     if (act === "emReview"){ openEmailPreview(); return; }
     if (act === "view"){ setView("contacts"); selectedId = btn.dataset.id; render(); return; }
     if (act === "delete"){ const c = contacts.find(x => x.id === btn.dataset.id); if (c) confirmDelete(c); return; }
+    if (act === "viewMerged"){ mergedBack = view; setView("merged"); render(); $("#main").scrollTop = 0; return; }
     if (act === "merge"){
       const p = planFor(btn.dataset.g); if (!p) return;
       const keep = p.group.items.find(c => c.id === p.keepId);
       const rp = mergeRowsPlan([p])[0] || { rows: [], dropped: 0 };
-      confirmDeletion(p.group.items.filter(c => c.id !== p.keepId), { extra: `<p style="margin:8px 0 0">The <b>${p.group.items.length}</b> contacts will become one, keeping <b>${esc(fullName(keep))}</b>.</p>${rowsPreview(rp)}` })
+      confirmMerge(p.group.items.filter(c => c.id !== p.keepId), fullName(keep), { extra: rowsPreview(rp) })
         .then(ok => ok && runMerges([p]));
       return;
     }
@@ -1714,7 +1793,7 @@
       const n = plans.reduce((s,p) => s + p.removeIds.length, 0);
       const rps = mergeRowsPlan(plans);
       const gone = plans.flatMap(p => p.group.items.filter(c => c.id !== p.keepId));
-      confirmDeletion(gone, { extra: `<p style="margin:8px 0 0">Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep.</p>${rowsPreview({ rows: rps.flatMap(g => g.rows), dropped: rps.reduce((s,g) => s + g.dropped, 0) })}` })
+      confirmMerge(gone, "", { text: `<b>${plans.length}</b> groups (<b>${gone.length}</b> contacts) will be merged, each into the contact marked Keep. Every number, email and note is kept, and the originals are saved under Merged originals so you can restore them.`, extra: `${rowsPreview({ rows: rps.flatMap(g => g.rows), dropped: rps.reduce((s,g) => s + g.dropped, 0) })}` })
         .then(ok => ok && runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
     }
   }
@@ -1814,7 +1893,7 @@
 
   // ---------- views & routing ----------
   let view = "contacts";
-  const HASH = { "review": "weekly-review", "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names", "country-fix": "country-fix" };
+  const HASH = { "review": "weekly-review", "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names", "country-fix": "country-fix", "merged": "merged-originals" };
   function viewFromHash(){ const h = location.hash.slice(1); return Object.keys(HASH).find(k => HASH[k] === h) || "contacts"; }
   function setView(v){
     view = v;
@@ -1837,7 +1916,7 @@
     // sidebar (filters + list) is hidden on non-contacts views: skip building it, rebuild on return
     if (view === "contacts"){ renderFilters(); renderList(); sidebarStale = false; } else sidebarStale = true;
     $("#app").classList.toggle("dupview", view !== "contacts");
-    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else if (view === "review") renderReview(); else if (view === "country-fix") renderCountryFix(); else renderDups();
+    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else if (view === "review") renderReview(); else if (view === "country-fix") renderCountryFix(); else if (view === "merged") renderMerged(); else renderDups();
     $("#categoryList").innerHTML = [...new Set([...CATEGORIES.map(c => c[0]), ...contacts.map(c => c.category).filter(Boolean)])].map(n => `<option value="${esc(n)}">`).join("");
     if (namesMemo !== sortedMemo.out || namesVer !== dataVer || sortedMemo.ref !== contacts){
       const s = sorted(contacts); namesMemo = sortedMemo.out; namesVer = dataVer;
@@ -3360,14 +3439,14 @@ address = one line. Do not invent anything that is not visible on the card. If t
       case "merge": {
         const ordered = [...list].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
         openBulk(`Merge ${n} contacts into one`,
-          `<p style="margin:0 0 10px">Choose the contact to keep. The others' details, tags, notes, activity and photo fill in what it's missing, then they move to Recently deleted for ${TRASH_DAYS} days.</p>
+          `<p style="margin:0 0 10px">Choose the contact to keep. The others' details, tags, notes, activity and photo fill in what it's missing, and the originals are saved under Merged originals so you can restore them.</p>
            <div class="mergelist">${ordered.map((c, i) => `<label class="pick"><input type="radio" name="mergeKeep" value="${esc(c.id)}" ${i===0?"checked":""}>${avatar(c)}<span class="meta"><span class="nm">${esc(fullName(c))}</span><span class="sub">${esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No details")}</span></span></label>`).join("")}</div>`,
           "Merge", async () => {
             const keepId = $('#bulkBody input[name="mergeKeep"]:checked').value;
             const removeIds = list.map(c => c.id).filter(id => id !== keepId);
             const gone = list.filter(c => c.id !== keepId), keep = list.find(c => c.id === keepId);
             const rp = mergeRowsPlan([{ keepId, removeIds }])[0] || { rows: [], dropped: 0 };
-            if (!(await confirmDeletion(gone, { extra: `<p style="margin:8px 0 0">Merging into <b>${esc(fullName(keep))}</b>.</p>${rowsPreview(rp)}` }))) return false;
+            if (!(await confirmMerge(gone, fullName(keep), { extra: rowsPreview(rp) }))) return false;
             exitSelect();
             await runMerges([{ keepId, removeIds }]);
             selectedId = keepId; setView("contacts"); render();
