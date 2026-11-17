@@ -766,7 +766,7 @@
     </div>
     <footer>
       <label style="display:flex;gap:6px;align-items:center;margin-right:auto;font-size:13px"><input type="checkbox" id="skipDupes" checked> Skip duplicates</label>
-      <label id="cmpWrap" style="display:flex;flex-direction:column;gap:2px;font-size:13px;flex:1 1 140px;min-width:0"><span style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmpExisting" checked> Compare to existing contacts</span><span class="note" style="margin:0 0 0 22px">Finds contacts that already exist and match 100%</span></label>
+      <label id="cmpWrap" style="display:flex;flex-direction:column;gap:2px;font-size:13px;flex:1 1 140px;min-width:0"><span style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmpExisting" checked> Compare to existing contacts</span><span class="note" style="margin:0 0 0 22px">Exact matches are replaced by the imported contact; the originals go to Recently deleted</span></label>
       <button type="button" class="btn" data-close>Cancel</button>
       <button type="button" class="btn primary" id="doImport" disabled>Import</button>
     </footer>
@@ -2362,15 +2362,7 @@
     if (compare){
       found = findExactMatches(cand);
       if (found.size){
-        const choice = await askMatchAll(found.size);
-        if (choice === "cancel") return;
-        let imp = new Set();
-        if (choice === "replace") repl = new Set(found.keys());
-        else if (choice === "review"){
-          const r = await reviewMatches([...found.entries()]);
-          if (!r) return;
-          imp = r.keep; repl = r.repl;
-        }
+        const imp = new Set(); repl = new Set(found.keys());   // exact matches are replaced automatically: no prompt
         const before = cand.length, taken = new Set();
         cand = cand.filter(c => {
           if (!found.has(c) || imp.has(c)) return true;
@@ -2407,7 +2399,7 @@
     });
     const ids = new Set(toAdd.map(c => c.id));
     const back = new Map(origs.map(o => [swap.get(o.id).id, o])), nRep = origs.length;
-    toast(`Imported ${toAdd.length}, deleted current ${nRep}, deleted new ${delNew}`, { label: "Undo", run: async () => {
+    toast(`Imported ${toAdd.length}, deleted current ${nRep}${delNew ? `, deleted new ${delNew}` : ""}`, { label: "Undo", run: async () => {
       const bid = new Set(origs.map(o => o.id));
       trash = trash.filter(c => !bid.has(c.id));
       contacts = contacts.map(c => back.get(c.id) || c).filter(c => !ids.has(c.id));
