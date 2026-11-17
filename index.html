@@ -2313,37 +2313,38 @@
     }
     return out;
   }
-  // ask once: "all" (skip all matches) | "review" | "cancel"
+  // ask once: "all" (skip all matches) | "replace" (replace all with imported) | "review" | "cancel"
   function askMatchAll(n){
     return new Promise(res => {
       const sc = $("#matchScrim"); let done = false;
       const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
       const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin("cancel"); });
       $("#matchTitle").textContent = "Contacts already exist";
-      $("#matchBody").innerHTML = `<p style="margin:0">${n} contact${n===1?" matches an existing contact":"s match existing contacts"} exactly.</p><p class="note">Existing contacts are never changed or deleted.</p>`;
-      $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="review">Review one by one</button><button type="button" class="btn primary" data-m="all">Skip all matches</button>`;
+      $("#matchBody").innerHTML = `<p style="margin:0">${n} contact${n===1?" matches an existing contact":"s match existing contacts"} exactly.</p><p class="note">Skip keeps your existing contacts. Replace moves them to Recently deleted (restorable for 30 days) and imports the new ones in their place.</p>`;
+      $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="review">Review one by one</button><button type="button" class="btn" data-m="replace">Replace all with imported</button><button type="button" class="btn primary" data-m="all">Skip all matches</button>`;
       $("#matchFoot").onclick = e => { const b = e.target.closest("[data-m]"); if (b) fin(b.dataset.m); };
       openModal("#matchScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
     });
   }
-  // step through matches: resolves to the Set of incoming contacts to import anyway, or null if cancelled
+  // step through matches: resolves to { keep: Set of incoming to import anyway, repl: Set of incoming that replace the existing one }, or null if cancelled
   function reviewMatches(items){
     return new Promise(res => {
-      const sc = $("#matchScrim"), keep = new Set(); let i = 0, done = false;
+      const sc = $("#matchScrim"), keep = new Set(), repl = new Set(); let i = 0, done = false;
       const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
       const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin(null); });
-      const line = (c) => `<div style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-top:8px"><b>${esc(fullName(c))}</b><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc([cmpNum(c).length ? phoneList(c).map(p => p.number).join(", ") : "", emailList(c).join(", "), c.company].filter(Boolean).join(" · ") || "No other details")}</div></div>`;
+      const line = (c, h) => `<div style="min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><div class="note" style="margin:0 0 4px">${h}</div><b style="overflow-wrap:anywhere">${esc(fullName(c))}</b><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc((phoneList(c)[0] || {}).number || c.phone || emailList(c)[0] || "No number")}</div></div>`;
       const show = () => {
         const [inc, ex] = items[i];
         $("#matchTitle").textContent = `${i+1} of ${items.length}`;
-        $("#matchBody").innerHTML = `<div class="note" style="margin:0">Incoming</div>${line(inc)}<div class="note" style="margin-top:12px">Already in your contacts</div>${line(ex)}`;
-        $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="skip">Skip</button><button type="button" class="btn primary" data-m="import">Import anyway</button>`;
+        $("#matchBody").innerHTML = `<div class="matchcmp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${line(ex, "Existing")}${line(inc, "Incoming")}</div>`;
+        $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="skip">Skip</button><button type="button" class="btn" data-m="import">Import anyway</button><button type="button" class="btn primary" data-m="replace">Replace with imported</button>`;
       };
       $("#matchFoot").onclick = e => {
         const b = e.target.closest("[data-m]"); if (!b) return;
         if (b.dataset.m === "cancel") return fin(null);
         if (b.dataset.m === "import") keep.add(items[i][0]);
-        if (++i >= items.length) fin(keep); else show();
+        if (b.dataset.m === "replace") repl.add(items[i][0]);
+        if (++i >= items.length) fin({ keep, repl }); else show();
       };
       show(); openModal("#matchScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
     });
@@ -2355,20 +2356,27 @@
   $("#doImport").addEventListener("click", async () => {
     const compare = $("#cmpExisting").checked, skip = $("#skipDupes").checked && !compare;
     let cand = pendingImport.filter(c => !(skip && c._dupe)).map(c => { const { _dupe, ...rest } = c; return rest; });
-    let skipped = pendingImport.length - cand.length;
+    let skipped = pendingImport.length - cand.length, repl = new Set(), found = new Map();
     if (!cand.length) return;
     if (compare){
-      const found = findExactMatches(cand);
+      found = findExactMatches(cand);
       if (found.size){
         const choice = await askMatchAll(found.size);
         if (choice === "cancel") return;
         let imp = new Set();
-        if (choice === "review"){
-          imp = await reviewMatches([...found.entries()]);
-          if (!imp) return;
+        if (choice === "replace") repl = new Set(found.keys());
+        else if (choice === "review"){
+          const r = await reviewMatches([...found.entries()]);
+          if (!r) return;
+          imp = r.keep; repl = r.repl;
         }
-        const before = cand.length;
-        cand = cand.filter(c => !found.has(c) || imp.has(c));
+        const before = cand.length, taken = new Set();
+        cand = cand.filter(c => {
+          if (!found.has(c) || imp.has(c)) return true;
+          if (!repl.has(c)) return false;
+          const ex = found.get(c); if (taken.has(ex)) return false;   // two incoming matching one existing: replace once
+          taken.add(ex); return true;
+        });
         skipped += before - cand.length;
       }
     }
@@ -2376,11 +2384,18 @@
     if (!toAdd.length){ closeModal($("#importScrim")); toast(`Imported 0, skipped ${skipped}`); return; }
     $("#doImport").disabled = true;
     await shrinkPhotos(toAdd, n => { $("#doImport").textContent = `Preparing photos… ${n}`; });
-    contacts = contacts.concat(toAdd); dataVer++;
+    // replaced: the incoming contact takes the existing contact's slot; the original goes to Recently deleted (same shape trashContacts makes)
+    const swap = new Map(), origs = [], binned = [], now = new Date().toISOString();
+    for (const c of toAdd) if (repl.has(c)){ const ex = found.get(c); swap.set(ex.id, c); origs.push(ex); binned.push(normalize({ ...ex, deletedAt: now })); }
+    const plain = toAdd.filter(c => !repl.has(c));
+    contacts = contacts.map(c => swap.get(c.id) || c).concat(plain);
+    if (binned.length) trash = binned.concat(trash);
+    dataVer++; nameCache.clear();
     if (toAdd.length === 1) selectedId = toAdd[0].id;
     closeModal($("#importScrim"));
     render();
     await batchSaves(async () => {
+      for (const c of binned) await persist(c);
       if (backend === "db"){
         for (const c of toAdd){
           try { await dbCol.doc(c.id).set(c); }
@@ -2390,10 +2405,14 @@
       } else saveLocal();
     });
     const ids = new Set(toAdd.map(c => c.id));
-    toast(`Imported ${toAdd.length}, skipped ${skipped}`, { label: "Undo", run: async () => {
-      contacts = contacts.filter(c => !ids.has(c.id)); if (ids.has(selectedId)) selectedId = null;
+    const back = new Map(origs.map(o => [swap.get(o.id).id, o])), nRep = origs.length;
+    toast(`Imported ${toAdd.length}, replaced ${nRep}, skipped ${skipped}`, { label: "Undo", run: async () => {
+      const bid = new Set(origs.map(o => o.id));
+      trash = trash.filter(c => !bid.has(c.id));
+      contacts = contacts.map(c => back.get(c.id) || c).filter(c => !ids.has(c.id));
+      if (ids.has(selectedId)) selectedId = null;
       dataVer++; nameCache.clear(); render();
-      await batchSaves(async () => { for (const id of ids) await removeStored(id); });
+      await batchSaves(async () => { for (const o of origs) await persist(o); for (const id of ids) if (!back.has(id)) await removeStored(id); });
       toast("Import undone");
     } });
   });
