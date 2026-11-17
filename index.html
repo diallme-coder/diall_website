@@ -1419,14 +1419,18 @@
     const d = c.replace(/\D/g, "").length;
     return d === 10 ? `+1 ${n}` : d === 9 ? `+224 ${n}` : "";
   }
+  const CC_TAG = "Numbers checked";
   function ccAnalyze(){
     if (ccMemo && ccMemo.ver === dataVer && ccMemo.ref === contacts) return ccMemo;
     const cnt = [0, 0, 0, 0, 0, 0, 0, 0], changes = [], bad = [];   // cnt: minus, 00213, 00224, 001, 00221 (display order), add-plus-1, parentheses, spaces
-    const slot = [1, 2, 4, 3];
+    const slot = [1, 2, 4, 3], todo = [];   // todo: all-correct contacts still lacking the CC_TAG tag
+    let cOk = 0;
     for (const c of contacts){
       const nm = fullName(c);
+      let nNum = 0, nBad = 0;
       const each = (num, idx, label) => {
         if (!String(num || "").trim()) return;
+        nNum++;
         const f = ccFix(num);
         if (f.n !== String(num)){
           if (f.minus) cnt[0]++;
@@ -1437,12 +1441,13 @@
           changes.push({ c, nm, idx, label, old: num, n: f.n });
         }
         const why = ccWhy(f.n);
-        if (why) bad.push({ c, nm, idx, label, stored: num, fixed: f.n, why, sugg: ccSuggest(f.n) });
+        if (why){ nBad++; bad.push({ c, nm, idx, label, stored: num, fixed: f.n, why, sugg: ccSuggest(f.n) }); }
       };
       each(c.phone, -1, "Primary");
       (c.phones || []).forEach((p, i) => each(p.number, i, p.label || "Other"));
+      if (nNum && !nBad){ cOk++; if (!tagList(c).some(t => t.toLowerCase() === CC_TAG.toLowerCase())) todo.push(c); }
     }
-    return (ccMemo = { ver: dataVer, ref: contacts, cnt, changes, bad });
+    return (ccMemo = { ver: dataVer, ref: contacts, cnt, changes, bad, todo, cOk });
   }
   function renderCountryFix(){
     $("#app").classList.remove("viewing");
@@ -1464,7 +1469,7 @@
       <div class="stored">${esc(b.stored)}</div><div class="why">${esc(b.why)}${b.sugg ? ` · suggested ${esc(b.sugg)}` : ""}</div>
       <div class="ed"><input class="cc-in" type="text" inputmode="tel" aria-label="Corrected number" value="${esc(b.sugg || b.fixed)}"><button class="btn sm primary" data-cc="save">Save</button><button class="btn sm danger" data-cc="remove">Remove</button></div></div>`).join("");
     if (rows.length > 300) h += `<p style="padding:8px 18px 14px;margin:0;color:var(--muted);font-size:13px">Showing 300 of ${rows.length}. Fix some, or filter to see the rest.</p>`;
-    h += `</div><div class="ccrefresh"><button class="btn" data-cc="refresh">Refresh</button>${N === 0 && !a.bad.length ? `<span class="ccok" role="status">All contacts are correct</span>` : ""}</div></div>`;
+    h += `</div><div class="ccrefresh"><button class="btn" data-cc="refresh">Refresh</button><button class="btn" data-cc="mark" ${a.todo.length ? "" : "disabled"}>${a.todo.length ? `Mark ${a.todo.length} correct contact${a.todo.length === 1 ? "" : "s"} as checked` : a.cOk ? "Already checked" : "Mark correct contacts as checked"}</button>${N === 0 && !a.bad.length ? `<span class="ccok" role="status">All contacts are correct</span>` : ""}</div></div>`;
     const hadFocus = document.activeElement?.id === "ccSearch", top = $("#main").scrollTop;
     $("#main").innerHTML = h;
     $("#main").scrollTop = top;
@@ -1491,6 +1496,21 @@
     ccPreview = false; dataVer++; render();
     await batchSaves(async () => { for (const c of list) await persist(c); });
     ccUndoToast(`Corrected ${a.changes.length} number${a.changes.length === 1 ? "" : "s"} in ${list.length} contact${list.length === 1 ? "" : "s"}`, prev);
+  }
+  // tag every all-correct contact "Numbers checked"; one write, Undo restores tags and updatedAt
+  async function ccMark(){
+    const list = ccAnalyze().todo.slice(); if (!list.length) return;
+    const prev = new Map(list.map(c => [c.id, { tags: tagList(c), updatedAt: c.updatedAt }])), now = new Date().toISOString();
+    for (const c of list){ c.tags = [...tagList(c), CC_TAG]; c.updatedAt = now; }
+    dataVer++; nameCache.clear(); render();
+    await batchSaves(async () => { for (const c of list) await persist(c); });
+    toast(`Tagged ${list.length} contact${list.length === 1 ? "" : "s"} as ${CC_TAG}`, { label: "Undo", run: async () => {
+      const back = [];
+      for (const c of contacts){ const v = prev.get(c.id); if (v){ c.tags = v.tags.slice(); c.updatedAt = v.updatedAt; back.push(c); } }
+      dataVer++; nameCache.clear(); render();
+      await batchSaves(async () => { for (const c of back) await persist(c); });
+      toast("Undone");
+    } });
   }
   async function ccRow(row, remove){
     const c = contacts.find(k => k.id === row.dataset.id), idx = +row.dataset.idx; if (!c) return;
@@ -1523,6 +1543,7 @@
     if (k === "preview"){ ccPreview = !ccPreview; renderCountryFix(); }
     else if (k === "apply") ccApply();
     else if (k === "refresh") ccRefresh();
+    else if (k === "mark") ccMark();
     else ccRow(b.closest(".ccrow"), k === "remove");
   }
   let ccSearchT;
