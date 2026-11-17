@@ -623,6 +623,13 @@
   .sharemsg:empty{display:none}
   .sharemsg{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:10px;padding:10px 12px}
   @media (max-width:560px){ .sharetop{grid-template-columns:1fr;justify-items:center} .sharefields{width:100%} .sharegrid{grid-template-columns:1fr 1fr} .qrbox{width:220px} }
+  #addrBox{grid-column:1/-1;margin-bottom:12px}
+  .addrf{display:grid;gap:8px;width:100%}
+  .addrf .field{margin:0;min-width:0}
+  .addrf .field label{font-size:11.5px}
+  .addrf input{width:100%;min-width:0}
+  .addrf .addrrow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.7fr) minmax(0,1fr);gap:8px}
+  @media (max-width:560px){ .addrf .addrrow{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -684,7 +691,7 @@
         <div class="field full"><label for="f_email">Email</label><input id="f_email" name="email" type="email"></div>
         <div class="field"><label for="f_company">Company</label><input id="f_company" name="company"></div>
         <div class="field"><label for="f_jobTitle">Job title</label><input id="f_jobTitle" name="jobTitle"></div>
-        <div class="field full"><label for="f_address">Address</label><input id="f_address" name="address"></div>
+        <div class="full" id="addrBox"></div>
         <div class="field"><label for="f_birthday">Birthday</label><input id="f_birthday" name="birthday" type="date"></div>
         <div class="field"><label for="f_anniversary">Anniversary</label><input id="f_anniversary" name="anniversary" type="date"></div>
         <div class="field"><label for="f_howMet">How you met</label><input id="f_howMet" name="howMet" placeholder="e.g. Web Summit 2026"></div>
@@ -815,7 +822,7 @@
 <script>
 (() => {
   // ---------- state ----------
-  const FIELDS = ["firstName","lastName","phone","phones","email","company","jobTitle","address","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
+  const FIELDS = ["firstName","lastName","phone","phones","email","company","jobTitle","address","addr","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
   const ITYPES = { call:{label:"Call",icon:"📞"}, email:{label:"Email",icon:"✉️"}, meeting:{label:"Meeting",icon:"🤝"}, message:{label:"Message",icon:"💬"}, other:{label:"Note",icon:"📝"} };
   const KIT = [["","Off"],["7","Every week"],["14","Every 2 weeks"],["30","Every month"],["45","Every 6 weeks"],["60","Every 2 months"],["90","Every 3 months"],["120","Every 4 months"],["180","Every 6 months"],["365","Every year"]];
   const CATEGORIES = [["Work","#2747d0"],["Students","#0e7f8f"],["Faculty","#7a4fd0"],["Vendors","#b45309"],["Friends & Family","#db2777"],["Alumni","#1c7a4b"],["Potential Employers","#c2410c"],["Important Services","#475569"]];
@@ -896,15 +903,48 @@
     toast._t = setTimeout(() => t.classList.remove("show"), action ? 6000 : 2400);
   }
 
+  // ---------- structured address: addr {line1,line2,city,state,zip}; `address` stays the composed display line ----------
+  const ADDR_CAP = { line1: 120, line2: 120, city: 120, state: 40, zip: 12 };
+  function normAddr(a){
+    const o = {}; a = a || {};
+    for (const k in ADDR_CAP) o[k] = (a[k] == null ? "" : String(a[k])).trim().slice(0, ADDR_CAP[k]);
+    o.state = o.state.toUpperCase();
+    return o;
+  }
+  const addrHas = a => !!a && typeof a === "object" && Object.keys(ADDR_CAP).some(k => a[k]);
+  const composeAddr = a => [a.line1, a.line2, a.city, [a.state, a.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  // addr as the edit form should show it (a legacy text-only address goes into Address 1)
+  const addrForEdit = c => addrHas(c && c.addr) ? c.addr : { line1: (c && c.address) || "" };
+  function addrBlock(c){
+    if (!addrHas(c.addr)) return esc(c.address);
+    const a = c.addr, cs = [a.city, [a.state, a.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    return [a.line1, a.line2, cs].filter(Boolean).map(l => `<div>${esc(l)}</div>`).join("");
+  }
+  function adrLine(c, type){
+    const a = c.addr;
+    if (addrHas(a)) return `ADR${type}:;;${vEsc([a.line1, a.line2].filter(Boolean).join(", "))};${vEsc(a.city)};${vEsc(a.state)};${vEsc(a.zip)};`;
+    return c.address ? `ADR${type}:;;${vEsc(c.address)};;;;` : "";
+  }
+  function addrFieldsHTML(a, pre){
+    const f = (k, label, ac, extra) => `<div class="field"><label for="${pre}addr_${k}">${label}</label><input id="${pre}addr_${k}" name="addr_${k}" value="${esc(a[k] || "")}" autocomplete="${ac}"${extra || ""}></div>`;
+    return `<div class="addrf">${f("line1", "Address 1 (number and street)", "address-line1")}${f("line2", "Address 2 (apt, suite, unit)", "address-line2")}
+      <div class="addrrow">${f("city", "City", "address-level2")}${f("state", "State", "address-level1")}${f("zip", "Zip code", "postal-code", ' inputmode="numeric" maxlength="10"')}</div></div>`;
+  }
+  const readAddr = (get) => { const o = {}; for (const k in ADDR_CAP) o[k] = get(k); return o; };
+
   function normalize(raw){
     const c = { id: raw.id && /^[A-Za-z0-9_\-.~:@+]{1,100}$/.test(raw.id) ? raw.id : uid() };
     for (const f of FIELDS){
       if (f === "favorite") c.favorite = !!raw.favorite && raw.favorite !== "false";
       else if (f === "tags") c.tags = tagList(raw);
-      else if (f === "phones") continue;
+      else if (f === "phones" || f === "addr") continue;
       else c[f] = raw[f] == null ? "" : String(raw[f]).trim();
     }
     c.phones = normPhones(raw.phones, c.phone);
+    if (raw.addr && typeof raw.addr === "object"){   // structured address wins; the display line is always recomposed from it
+      const a = normAddr(raw.addr);
+      if (addrHas(a)){ c.addr = a; c.address = composeAddr(a); } else c.address = "";
+    }
     if (!/^\d{1,4}$/.test(c.keepInTouch)) c.keepInTouch = "";
     c.interactions = (Array.isArray(raw.interactions) ? raw.interactions : [])
       .filter(i => i && /^\d{4}-\d{2}-\d{2}/.test(String(i.date)))
@@ -977,12 +1017,12 @@
     purgeTrash();
     setStore("loading");
     render();
-    if (!window.claude || typeof window.claude.use !== "function"){ setStore(); maybeMigrate(); return; }
+    if (!window.claude || typeof window.claude.use !== "function"){ setStore(); maybeMigrateAll(); return; }
     try {
       claude.use("downloads").then(d => { downloads = d; }).catch(()=>{});
       const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
       const id = user ? await user.id() : null;
-      if (!db || !id){ setStore(); maybeMigrate(); return; }
+      if (!db || !id){ setStore(); maybeMigrateAll(); return; }
       dbCol = db.collection("data/users/" + id);
       backend = "db";
       const timer = setTimeout(() => setStore("stale"), 10000);
@@ -1005,9 +1045,9 @@
         if (!snap.metadata.fromCache && !purgedRemote){ purgedRemote = true; purgeTrash(); }
         if (selectedId && !contacts.some(c=>c.id===selectedId)) selectedId = null;
         render();
-        if (!snap.metadata.fromCache) maybeMigrate();
-      }, err => { clearTimeout(timer); switchToLocal(); render(); maybeMigrate(); });
-    } catch(e){ backend="local"; setStore(); maybeMigrate(); }
+        if (!snap.metadata.fromCache) maybeMigrateAll();
+      }, err => { clearTimeout(timer); switchToLocal(); render(); maybeMigrateAll(); });
+    } catch(e){ backend="local"; setStore(); maybeMigrateAll(); }
   }
 
   // ---------- rendering ----------
@@ -1160,7 +1200,7 @@
         ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "", "email")}
         ${row("Company", esc(c.company), "company")}
         ${row("Job title", esc(c.jobTitle), "jobTitle")}
-        ${row("Address", esc(c.address), "address")}
+        ${row("Address", addrBlock(c), "address")}
         ${row("Birthday", fmtDate(c.birthday) + occText(c.birthday, "turns"), "birthday")}
         ${row("Anniversary", fmtDate(c.anniversary) + occText(c.anniversary, "years"), "anniversary")}
         ${row("Website", url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(c.website)}</a>` : esc(c.website), "website")}
@@ -1319,6 +1359,7 @@
     for (const o of others){
       for (const f of FIELDS){
         if (f === "tags" || f === "favorite" || f === "notes" || f === "phones") continue;
+        if (f === "addr"){ if (!addrHas(m.addr) && addrHas(o.addr)){ m.addr = o.addr; m.address = o.address; } continue; }
         if (f === FIELDS[0]) for (const k of ["photo","icon","avatarColor"]) if (!m[k] && o[k]) m[k] = o[k];
         if (!m[f] && o[f]) m[f] = o[f];
       }
@@ -1455,12 +1496,13 @@
     $("#editTitle").textContent = title || (c ? "Edit contact" : "New contact");
     $("#editErr").textContent = "";
     for (const f of FIELDS){
-      if (f === "phones") continue;
+      if (f === "phones" || f === "addr" || f === "address") continue;
       const el = $("#f_"+f);
       if (f === "favorite") el.checked = !!src?.favorite;
       else if (f === "tags") el.value = src ? tagList(src).join(", ") : "";
       else el.value = src?.[f] || "";
     }
+    $("#addrBox").innerHTML = addrFieldsHTML(addrForEdit(src), "f_");
     openModal("#editScrim");
     enhancePhone($("#f_phone"));
     $("#phEdit").innerHTML = phEditorHTML(src?.phones); phEnhance($("#phEdit"));
@@ -1497,7 +1539,8 @@
   $("#editForm").addEventListener("submit", async e => {
     e.preventDefault();
     const raw = {};
-    for (const f of FIELDS){ if (f === "phones") continue; const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    for (const f of FIELDS){ if (f === "phones" || f === "addr" || f === "address") continue; const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    raw.addr = readAddr(k => $("#f_addr_"+k).value);
     raw.phone = readPhone($("#f_phone"));
     raw.phones = readPhones($("#phEdit"));
     const err = validateRaw(raw);
@@ -1511,13 +1554,13 @@
   let inlineFocus = null;      // field to focus when entering edit mode
   const EDIT_ROWS = [
     ["phone","Phone","tel"],["email","Email","email"],["company","Company","text"],["jobTitle","Job title","text"],
-    ["address","Address","text"],["birthday","Birthday","date"],["anniversary","Anniversary","date"],["website","Website","url"],
+    ["addr","Address","addr"],["birthday","Birthday","date"],["anniversary","Anniversary","date"],["website","Website","url"],
     ["category","Category","category"],["priority","Priority","priority"],["keepInTouch","Keep in touch","select"],["nextFollowUp","Next follow-up","date"],["followUpNote","Follow-up note","text"],
     ["howMet","How you met","text"],["introducedBy","Introduced by","text"],
     ["tags","Tags","text"],["notes","Notes","textarea"]
   ];
   function startInlineEdit(field){
-    inlineEdit = true; inlineFocus = field || "firstName"; renderMain();
+    inlineEdit = true; inlineFocus = field === "address" ? "addr_line1" : (field || "firstName"); renderMain();
   }
   function collectInline(){
     const f = $("#inlineForm"); if (!f) return null;
@@ -1526,6 +1569,7 @@
       const el = f.elements[k]; if (!el) continue;
       raw[k] = k === "favorite" ? el.checked : el.value;
     }
+    if (f.elements.addr_line1) raw.addr = readAddr(k => f.elements["addr_" + k].value);
     if (f.elements.phone) raw.phone = readPhone(f.elements.phone);
     const pe = f.querySelector(".phedit"); if (pe) raw.phones = readPhones(pe);
     return raw;
@@ -1537,6 +1581,8 @@
     const pkey = l => (l || []).map(p => String(p.number).trim() + "|" + (p.label || "Other")).join(";");
     return FIELDS.some(k => k === "favorite" ? !!raw[k] !== !!c[k]
       : k === "phones" ? raw.phones !== undefined && pkey(raw.phones) !== pkey(c.phones)
+      : k === "addr" ? raw.addr !== undefined && composeAddr(normAddr(raw.addr)) !== (c.address || "")
+      : k === "address" ? false
       : k === "tags" ? tagList(raw).join(",") !== tagList(c).join(",")
       : String(raw[k] ?? "").trim() !== String(c[k] ?? ""));
   }
@@ -1578,7 +1624,7 @@
       </div>
       <div class="err" id="inlineErr" role="alert"></div>
       <div class="card editing">
-        ${EDIT_ROWS.map(([k,label,type]) => `<div class="row"><label class="k" for="i_${k}">${label}</label><div class="v">${inp(k,label,type, k==="tags" ? tagList(c).join(", ") : c[k])}${k === "phone" ? `<div class="phedit">${phEditorHTML(c.phones)}</div>` : ""}</div></div>`).join("")}
+        ${EDIT_ROWS.map(([k,label,type]) => `<div class="row"><label class="k" for="i_${k === "addr" ? "addr_line1" : k}">${label}</label><div class="v">${k === "addr" ? addrFieldsHTML(addrForEdit(c), "i_") : inp(k,label,type, k==="tags" ? tagList(c).join(", ") : c[k])}${k === "phone" ? `<div class="phedit">${phEditorHTML(c.phones)}</div>` : ""}</div></div>`).join("")}
       </div>
     </form>`;
     enhancePhone($("#i_phone")); phEnhance($("#inlineForm"));
@@ -1629,7 +1675,7 @@
       if (c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
       for (const p of phoneList(c)) L.push(`TEL;TYPE=${p.primary ? "CELL" : telType(p.label)}:${vEsc(p.number)}`);
       if (c.email) L.push(`EMAIL;TYPE=INTERNET:${vEsc(c.email)}`);
-      if (c.address) L.push(`ADR;TYPE=HOME:;;${vEsc(c.address)};;;;`);
+      { const ad = adrLine(c, ";TYPE=HOME"); if (ad) L.push(ad); }
       if (c.birthday) L.push(`BDAY:${c.birthday}`);
       if (c.anniversary) L.push(`X-ANNIVERSARY:${c.anniversary}`);
       if (c.website) L.push(`URL:${vEsc(c.website)}`);
@@ -3183,7 +3229,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
       if (shareOn.email && c.email) L.push(`EMAIL:${vEsc(c.email)}`);
       if (shareOn.work && c.company) L.push(`ORG:${vEsc(c.company)}`);
       if (shareOn.work && c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
-      if (shareOn.address && c.address) L.push(`ADR:;;${vEsc(c.address)};;;;`);
+      if (shareOn.address) { const ad = adrLine(c, ""); if (ad) L.push(ad); }
       if (shareOn.website && c.website) L.push(`URL:${vEsc(c.website)}`);
       if (shareOn.birthday && c.birthday) L.push(`BDAY:${c.birthday}`);
       if (shareOn.notes && c.notes) L.push(`NOTE:${vEsc(c.notes)}`);
@@ -3492,6 +3538,34 @@ address = one line. Do not invent anything that is not visible on the card. If t
       } });
     } finally { pmRunning = false; }
   }
+
+  // ---------- one-time migration to structured addresses (flag "cm.addr.v1") ----------
+  // a text-only address goes whole into addr.line1; nothing is split or guessed. Raw backup first; idempotent.
+  const AM_FLAG = "cm.addr.v1", AM_BACKUP = "contact-manager.backup.pre-addr";
+  let amRunning = false;
+  async function maybeMigrateAddr(){
+    if (amRunning) return;
+    try { if (localStorage.getItem(AM_FLAG)) return; } catch(e){ return; }
+    amRunning = true;
+    try {
+      const all = contacts.concat(trash);
+      if (!all.length){ try { localStorage.setItem(AM_FLAG, JSON.stringify({ at: new Date().toISOString(), migrated: 0 })); } catch(e){} return; }
+      const todo = all.filter(c => String(c.address || "").trim() && !addrHas(c.addr) && String(c.address).trim().length <= ADDR_CAP.line1);
+      const tooLong = all.filter(c => String(c.address || "").trim().length > ADDR_CAP.line1 && !addrHas(c.addr)).length;
+      if (todo.length){
+        const raw = (backend === "local" && localStorage.getItem(LS_KEY)) || JSON.stringify(all);
+        try { localStorage.setItem(AM_BACKUP, raw); } catch(e){ return; }
+        for (const c of todo){ c.addr = normAddr({ line1: c.address }); }
+        dataVer++;
+        render();
+        await batchSaves(async () => { for (const c of todo) await persist(c); });
+      }
+      const summary = { at: new Date().toISOString(), migrated: todo.length, leftAsText: tooLong };
+      try { localStorage.setItem(AM_FLAG, JSON.stringify(summary)); } catch(e){}
+      try { console.info("cm.addr.v1", JSON.stringify(summary)); } catch(e){}
+    } finally { amRunning = false; }
+  }
+  async function maybeMigrateAll(){ await maybeMigrate(); await maybeMigrateAddr(); }
 
   initStorage();
 })();
