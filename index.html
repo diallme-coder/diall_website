@@ -1556,7 +1556,7 @@
       }
       h += `</div>`;
     }
-    h += `<p class="note">Merging keeps the contact marked <b>Keep</b>, fills its empty fields from the others, combines tags and notes, saves any different phone or email into its notes, and deletes the rest.</p></div>`;
+    h += `<p class="note">Merging keeps the contact marked <b>Keep</b>, fills its empty fields from the others, combines tags and notes, saves any different email into its notes, adds each different phone number as its own row under it (“Name 2”, “Name 3”…), and deletes the rest.</p></div>`;
     const hadFocus = document.activeElement?.id === "dupSearch";
     $("#main").innerHTML = h;
     if (hadFocus){ const s = $("#dupSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
@@ -1567,7 +1567,7 @@
     const extraNotes = [];
     for (const o of others){
       for (const f of FIELDS){
-        if (f === "tags" || f === "favorite" || f === "notes" || f === "phones" || f === "emails") continue;
+        if (f === "tags" || f === "favorite" || f === "notes" || f === "phones" || f === "emails" || f === "phone") continue;   // numbers never move into the kept contact: they become rows (mergeRowsPlan)
         if (f === "addr"){ if (!addrHas(m.addr) && addrHas(o.addr)){ m.addr = o.addr; m.address = o.address; } continue; }
         if (f === FIELDS[0]) for (const k of ["photo","icon","avatarColor"]) if (!m[k] && o[k]) m[k] = o[k];
         if (!m[f] && o[f]) m[f] = o[f];
@@ -1576,7 +1576,6 @@
       m.tags = [...new Set([...m.tags, ...tagList(o)])];
       const seen = new Set((m.interactions||[]).map(i => i.extId || i.id));
       m.interactions = [...(m.interactions||[]), ...(o.interactions||[]).filter(i => !seen.has(i.extId || i.id))];
-      m.phones = normPhones((m.phones || []).concat(o.phone ? [{ number: o.phone, label: "Other" }] : [], o.phones || []), m.phone);
       m.emails = normEmails((m.emails || []).concat(o.email && o.email.toLowerCase() !== String(m.email).toLowerCase() ? [o.email] : [], o.emails || []), m.email);
       if (o.notes && !String(m.notes).includes(o.notes)) extraNotes.push(o.notes);
     }
@@ -1586,22 +1585,58 @@
     return normalize(m);
   }
 
-  async function runMerges(plan){   // plan: [{keepId, removeIds}]
-    const merged = [], removed = [], gone = [];
-    for (const p of plan){
-      const keep = contacts.find(c => c.id === p.keepId);
-      const others = contacts.filter(c => p.removeIds.includes(c.id));
+  // numbers of the removed contacts -> new rows "<Name> 2", "<Name> 3"...; deduped by digit key against the kept contact and earlier rows. Pure.
+  function mergeRowsPlan(plans){   // plans: [{keepId, removeIds}] -> [{keep, others, rows:[spec], dropped}]
+    const gone = new Set(); for (const p of plans) for (const id of p.removeIds) gone.add(id);
+    const taken = new Set(contacts.filter(c => !gone.has(c.id)).map(c => fullName(c).toLowerCase()));
+    const out = [];
+    for (const p of plans){
+      const keep = contacts.find(c => c.id === p.keepId), others = contacts.filter(c => p.removeIds.includes(c.id));
       if (!keep || !others.length) continue;
-      const m = mergeContacts(keep, others);
-      contacts = contacts.filter(c => !p.removeIds.includes(c.id)).map(c => c.id === m.id ? m : c);
-      merged.push(m); removed.push(...p.removeIds); gone.push(...others);
+      const seen = new Set(phoneList(keep).map(x => digKey(x.number) || numKey(x.number)));
+      const base = fullName(keep), rows = []; let dropped = 0, n = 2;
+      for (const o of others) for (const x of phoneList(o)){
+        const num = String(x.number || "").trim(); if (!num) continue;
+        const k = digKey(num) || numKey(num);
+        if (seen.has(k)){ dropped++; continue; }
+        seen.add(k);
+        while (taken.has((base + " " + n).toLowerCase())) n++;
+        taken.add((base + " " + n).toLowerCase());
+        const spec = { phone: num, category: keep.category, priority: keep.priority, notes: x.label || "" };
+        if (keep.lastName){ spec.firstName = keep.firstName; spec.lastName = keep.lastName + " " + n; } else { spec.firstName = base + " " + n; spec.lastName = ""; }
+        rows.push(spec); n++;
+      }
+      out.push({ keep, others, rows, dropped });
     }
+    return out;
+  }
+
+  async function runMerges(plan){   // plan: [{keepId, removeIds}]
+    const snapC = JSON.parse(JSON.stringify(contacts)), snapT = JSON.parse(JSON.stringify(trash));
+    const rp = mergeRowsPlan(plan);
+    const merged = [], removed = [], gone = [], newRows = []; let dropped = 0;
     const now = new Date().toISOString();
+    for (const g of rp){
+      const m = mergeContacts(g.keep, g.others), ids = g.others.map(c => c.id);
+      const rows = g.rows.map(sp => normalize({ ...sp, id: undefined, createdAt: now, updatedAt: now }));
+      const out = [];
+      for (const c of contacts){ if (ids.includes(c.id)) continue; if (c.id === m.id){ out.push(m, ...rows); } else out.push(c); }
+      contacts = out;
+      merged.push(m); removed.push(...ids); gone.push(...g.others); newRows.push(...rows); dropped += g.dropped;
+    }
+    if (!merged.length) return;
     const binned = gone.map(c => normalize({ ...c, deletedAt: now, mergedInto: undefined }));
     trash = trash.concat(binned);
+    dataVer++; nameCache.clear();
     render();
-    await batchSaves(async () => { for (const m of merged) await persist(m); for (const c of binned) await persist(c); });
-    toast(`Merged ${removed.length + merged.length} contacts into ${merged.length}`);
+    await batchSaves(async () => { for (const m of merged) await persist(m); for (const r of newRows) await persist(r); for (const c of binned) await persist(c); });
+    toast(`Merged ${removed.length + merged.length} contacts into ${merged.length} · ${newRows.length} number row${newRows.length === 1 ? "" : "s"} created${dropped ? `, ${dropped} duplicate number${dropped === 1 ? "" : "s"} skipped` : ""}`, { label: "Undo", run: async () => {
+      const cur = new Map(contacts.concat(trash).map(c => [c.id, JSON.stringify(c)]));
+      const back = snapC.concat(snapT).filter(c => cur.get(c.id) !== JSON.stringify(c));
+      contacts = snapC; trash = snapT; dataVer++; nameCache.clear(); render();
+      await batchSaves(async () => { for (const c of back) await persist(c); for (const r of newRows) await removeStored(r.id); });
+      toast("Undone");
+    } });
   }
 
   function planFor(gk){
@@ -1609,6 +1644,11 @@
     const g = dupGroups(kind).find(x => x.key === key); if (!g) return null;
     let keepId = keepChoice.get(gk); if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
     return { keepId, removeIds: g.items.filter(c => c.id !== keepId).map(c => c.id), group: g };
+  }
+
+  function rowsPreview(rp){
+    const L = rp.rows.slice(0, 12).map(r => `<li>${esc([r.firstName, r.lastName].filter(Boolean).join(" "))} · ${esc(r.phone)}${r.notes ? " (" + esc(r.notes) + ")" : ""}</li>`).join("");
+    return `<div class="mrows" style="margin-top:8px"><b>${rp.rows.length}</b> new number row${rp.rows.length === 1 ? "" : "s"} will be created${rp.dropped ? `; <b>${rp.dropped}</b> duplicate number${rp.dropped === 1 ? "" : "s"} skipped` : ""}.${L ? `<ul style="margin:6px 0 0;padding-left:18px;max-height:30vh;overflow:auto">${L}</ul>${rp.rows.length > 12 ? `<div>…and ${rp.rows.length - 12} more</div>` : ""}` : ""}</div>`;
   }
 
   function handleDup(btn){
@@ -1619,8 +1659,9 @@
     if (act === "merge"){
       const p = planFor(btn.dataset.g); if (!p) return;
       const keep = p.group.items.find(c => c.id === p.keepId);
+      const rp = mergeRowsPlan([p])[0] || { rows: [], dropped: 0 };
       askConfirm("Merge contacts?",
-        `<b>${p.group.items.length}</b> contacts will become one, keeping <b>${esc(fullName(keep))}</b>. The other ${p.removeIds.length} move to Recently deleted for ${TRASH_DAYS} days.`,
+        `<b>${p.group.items.length}</b> contacts will become one, keeping <b>${esc(fullName(keep))}</b>. The other ${p.removeIds.length} move to Recently deleted for ${TRASH_DAYS} days.${rowsPreview(rp)}`,
         "Merge", () => runMerges([p]));
       return;
     }
@@ -1628,8 +1669,9 @@
       const groups = dupGroups(view);
       const plans = groups.map(g => planFor(view + "|" + g.key)).filter(Boolean);
       const n = plans.reduce((s,p) => s + p.removeIds.length, 0);
+      const rps = mergeRowsPlan(plans);
       askConfirm("Merge all groups?",
-        `Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep, and <b>${n}</b> duplicate contacts will move to Recently deleted for ${TRASH_DAYS} days.`,
+        `Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep, and <b>${n}</b> duplicate contacts will move to Recently deleted for ${TRASH_DAYS} days.${rowsPreview({ rows: rps.flatMap(g => g.rows), dropped: rps.reduce((s,g) => s + g.dropped, 0) })}`,
         "Merge all", () => runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
     }
   }
