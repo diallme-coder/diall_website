@@ -1388,9 +1388,16 @@
     if (c[0] !== "+"){
       if (c.startsWith("00")) return "leading 00 not in the list";
       if (d < 7) return "too short";
-      return c[0] === "0" ? "no country code (starts with 0)" : "no country code";
+      return d === 10 ? "no country code (10 digits, USA +1 suggested)" : d === 9 ? "no country code (9 digits, Guinea +224 suggested)" : `no country code (${d} digits, no suggestion)`;
     }
     return d < 7 ? "too short" : d > 15 ? "too long" : "invalid number";
+  }
+  // prefix suggestion (prefills the report row input only; Apply never uses it): 10 digits -> +1, 9 digits -> +224, no "+" and no leading 00
+  function ccSuggest(n){
+    const c = String(n).replace(/[\s().\-]/g, "");
+    if (c[0] === "+" || c.startsWith("00")) return "";
+    const d = c.replace(/\D/g, "").length;
+    return d === 10 ? `+1 ${n}` : d === 9 ? `+224 ${n}` : "";
   }
   function ccAnalyze(){
     if (ccMemo && ccMemo.ver === dataVer && ccMemo.ref === contacts) return ccMemo;
@@ -1407,7 +1414,7 @@
           changes.push({ c, nm, idx, label, old: num, n: f.n });
         }
         const why = ccWhy(f.n);
-        if (why) bad.push({ c, nm, idx, label, stored: num, fixed: f.n, why });
+        if (why) bad.push({ c, nm, idx, label, stored: num, fixed: f.n, why, sugg: ccSuggest(f.n) });
       };
       each(c.phone, -1, "Primary");
       (c.phones || []).forEach((p, i) => each(p.number, i, p.label || "Other"));
@@ -1431,8 +1438,8 @@
     if (!a.bad.length) h += `<p style="padding:6px 18px 18px;margin:0;color:var(--muted)">${contacts.length ? "Every number is in the right format." : "Add or import contacts first."}</p>`;
     else if (!rows.length) h += `<p style="padding:6px 18px 18px;margin:0;color:var(--muted)">No numbers match “${esc(ccQuery)}”.</p>`;
     h += rows.slice(0, 300).map(b => `<div class="ccrow" data-id="${esc(b.c.id)}" data-idx="${b.idx}"><div class="top"><span class="nm">${esc(b.nm)}</span><span class="fld">${esc(b.label)}</span></div>
-      <div class="stored">${esc(b.stored)}</div><div class="why">${esc(b.why)}</div>
-      <div class="ed"><input class="cc-in" type="text" inputmode="tel" aria-label="Corrected number" value="${esc(b.fixed)}"><button class="btn sm primary" data-cc="save">Save</button><button class="btn sm danger" data-cc="remove">Remove</button></div></div>`).join("");
+      <div class="stored">${esc(b.stored)}</div><div class="why">${esc(b.why)}${b.sugg ? ` · suggested ${esc(b.sugg)}` : ""}</div>
+      <div class="ed"><input class="cc-in" type="text" inputmode="tel" aria-label="Corrected number" value="${esc(b.sugg || b.fixed)}"><button class="btn sm primary" data-cc="save">Save</button><button class="btn sm danger" data-cc="remove">Remove</button></div></div>`).join("");
     if (rows.length > 300) h += `<p style="padding:8px 18px 14px;margin:0;color:var(--muted);font-size:13px">Showing 300 of ${rows.length}. Fix some, or filter to see the rest.</p>`;
     h += `</div></div>`;
     const hadFocus = document.activeElement?.id === "ccSearch", top = $("#main").scrollTop;
