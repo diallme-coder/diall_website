@@ -849,6 +849,15 @@
   </div>
 </div>
 
+<!-- Confirm deletion modal (every path that moves contacts to Recently deleted) -->
+<div class="scrim" id="delScrim">
+  <div class="modal" style="max-width:420px" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+    <header><h3 id="delTitle">Confirm deletion</h3></header>
+    <div class="body"><p id="delMsg" style="margin:0;overflow-wrap:anywhere"></p><ul id="delList" style="margin:8px 0 0;padding-left:18px;overflow-wrap:anywhere"></ul><div id="delExtra"></div></div>
+    <footer><button type="button" class="btn" id="delNo">No</button><button type="button" class="btn primary" id="delYes" style="background:var(--danger);border-color:var(--danger)">Yes, delete</button></footer>
+  </div>
+</div>
+
 <!-- Email move preview modal -->
 <div class="scrim" id="emScrim">
   <div class="modal" style="max-width:560px">
@@ -1695,9 +1704,8 @@
       const p = planFor(btn.dataset.g); if (!p) return;
       const keep = p.group.items.find(c => c.id === p.keepId);
       const rp = mergeRowsPlan([p])[0] || { rows: [], dropped: 0 };
-      askConfirm("Merge contacts?",
-        `<b>${p.group.items.length}</b> contacts will become one, keeping <b>${esc(fullName(keep))}</b>. The other ${p.removeIds.length} move to Recently deleted for ${TRASH_DAYS} days.${rowsPreview(rp)}`,
-        "Merge", () => runMerges([p]));
+      confirmDeletion(p.group.items.filter(c => c.id !== p.keepId), { extra: `<p style="margin:8px 0 0">The <b>${p.group.items.length}</b> contacts will become one, keeping <b>${esc(fullName(keep))}</b>.</p>${rowsPreview(rp)}` })
+        .then(ok => ok && runMerges([p]));
       return;
     }
     if (act === "mergeAll"){
@@ -1705,9 +1713,9 @@
       const plans = groups.map(g => planFor(view + "|" + g.key)).filter(Boolean);
       const n = plans.reduce((s,p) => s + p.removeIds.length, 0);
       const rps = mergeRowsPlan(plans);
-      askConfirm("Merge all groups?",
-        `Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep, and <b>${n}</b> duplicate contacts will move to Recently deleted for ${TRASH_DAYS} days.${rowsPreview({ rows: rps.flatMap(g => g.rows), dropped: rps.reduce((s,g) => s + g.dropped, 0) })}`,
-        "Merge all", () => runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
+      const gone = plans.flatMap(p => p.group.items.filter(c => c.id !== p.keepId));
+      confirmDeletion(gone, { extra: `<p style="margin:8px 0 0">Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep.</p>${rowsPreview({ rows: rps.flatMap(g => g.rows), dropped: rps.reduce((s,g) => s + g.dropped, 0) })}` })
+        .then(ok => ok && runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
     }
   }
 
@@ -2027,10 +2035,24 @@
     openModal("#confirmScrim");
     $("#confirmOk").onclick = async () => { closeModal($("#confirmScrim")); await onOk(); };
   }
-  function confirmDelete(c){
-    askConfirm("Delete contact?", `<b>${esc(fullName(c))}</b> will move to Recently deleted. You can restore it for ${TRASH_DAYS} days.`, "Delete", async () => {
-      await trashContacts([c]);
+  // One Yes/No dialog for every deletion. Resolves true only on "Yes, delete"; No, Escape, backdrop and close all resolve false. Enter never confirms (focus starts on No).
+  // opts.text replaces the message, opts.extra is extra HTML shown below the list.
+  function confirmDeletion(list, opts = {}){
+    return new Promise(res => {
+      const sc = $("#delScrim"), n = list.length; let done = false;
+      const fin = v => { if (done) return; done = true; mo.disconnect(); $("#delYes").onclick = $("#delNo").onclick = null; closeModal(sc); res(v); };
+      const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin(false); });
+      $("#delMsg").innerHTML = opts.text || (n === 1 ? `<b>${esc(fullName(list[0]))}</b> will be moved to Recently deleted. You can restore it for ${TRASH_DAYS} days.` : `<b>${n.toLocaleString()}</b> contacts will be moved to Recently deleted. You can restore them for ${TRASH_DAYS} days.`);
+      $("#delList").innerHTML = n === 1 && !opts.text ? "" : list.slice(0, 10).map(c => `<li>${esc(fullName(c))}</li>`).join("") + (n > 10 ? `<li style="list-style:none;margin-left:-18px">and ${(n - 10).toLocaleString()} more</li>` : "");
+      $("#delExtra").innerHTML = opts.extra || "";
+      $("#delNo").onclick = () => fin(false);
+      $("#delYes").onclick = () => fin(true);
+      openModal("#delScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
+      $("#delNo").focus();
     });
+  }
+  async function confirmDelete(c){
+    if (await confirmDeletion([c])) await trashContacts([c]);
   }
 
   // ---------- formats: export ----------
@@ -2407,6 +2429,10 @@
     }
     const toAdd = cand;
     if (!toAdd.length){ closeModal($("#importScrim")); toast(`Imported 0, deleted current 0, deleted new ${delNew}${skipped > delNew ? `, skipped ${skipped - delNew}` : ""}`); return; }
+    if (repl.size){   // last step before any write: confirm the existing contacts that the import replaces
+      const gone = [...new Set(toAdd.filter(c => repl.has(c)).map(c => found.get(c)))];
+      if (!(await confirmDeletion(gone))) return;
+    }
     $("#doImport").disabled = true;
     await shrinkPhotos(toAdd, n => { $("#doImport").textContent = `Preparing photos… ${n}`; });
     // replaced: the incoming contact takes the existing contact's slot; the original goes to Recently deleted (same shape trashContacts makes)
@@ -3268,10 +3294,9 @@ address = one line. Do not invent anything that is not visible on the card. If t
   ["pointerup","pointercancel","pointermove"].forEach(ev => $("#list").addEventListener(ev, e => { if (ev === "pointermove" && Math.abs(e.movementY) < 4 && Math.abs(e.movementX) < 4) return; clearTimeout(lpTimer); }));
   $("#list").addEventListener("contextmenu", e => { if (e.target.closest(".item") && longPressed) e.preventDefault(); });
 
-  $("#bulkbar").addEventListener("click", e => {
+  $("#bulkbar").addEventListener("click", async e => {
     const b = e.target.closest("[data-bulk]"); if (!b || b.disabled) return;
     const list = pickedContacts(), n = list.length;
-    const who = n === 1 ? esc(fullName(list[0])) : `${n.toLocaleString()} contacts`;
     switch (b.dataset.bulk){
       case "fav": {
         const val = !list.every(c => c.favorite);
@@ -3340,6 +3365,9 @@ address = one line. Do not invent anything that is not visible on the card. If t
           "Merge", async () => {
             const keepId = $('#bulkBody input[name="mergeKeep"]:checked').value;
             const removeIds = list.map(c => c.id).filter(id => id !== keepId);
+            const gone = list.filter(c => c.id !== keepId), keep = list.find(c => c.id === keepId);
+            const rp = mergeRowsPlan([{ keepId, removeIds }])[0] || { rows: [], dropped: 0 };
+            if (!(await confirmDeletion(gone, { extra: `<p style="margin:8px 0 0">Merging into <b>${esc(fullName(keep))}</b>.</p>${rowsPreview(rp)}` }))) return false;
             exitSelect();
             await runMerges([{ keepId, removeIds }]);
             selectedId = keepId; setView("contacts"); render();
@@ -3347,12 +3375,10 @@ address = one line. Do not invent anything that is not visible on the card. If t
         break;
       }
       case "delete":
-        askConfirm(`Delete ${n === 1 ? "this contact" : n.toLocaleString() + " contacts"}?`,
-          `<b>${who}</b> will move to Recently deleted${n > 1 ? `, including ${list.slice(0,3).map(c => esc(fullName(c))).join(", ")}${n > 3 ? ` and ${n-3} more` : ""}` : ""}. You can restore ${n === 1 ? "it" : "them"} for ${TRASH_DAYS} days.`,
-          "Delete", async () => {
-            exitSelect();
-            await trashContacts(list);
-          });
+        if (await confirmDeletion(list)){
+          exitSelect();
+          await trashContacts(list);
+        }
         break;
     }
   });
@@ -3859,7 +3885,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
       for (const [inc, ex] of found) if (!seen.has(ex)){ seen.add(ex); items.push([inc, ex]); }
       if (!items.length){ toast("No exact matches found in this file"); return; }
       const chosen = await askFileMatches(items);   // nothing is written before this resolves
-      if (chosen && chosen.length) await deleteMatchedContacts(chosen);
+      if (chosen && chosen.length && await confirmDeletion(chosen)) await deleteMatchedContacts(chosen);
     };
     r.readAsText(file);
   }
@@ -4092,6 +4118,10 @@ address = one line. Do not invent anything that is not visible on the card. If t
       const byId = new Map(all.map(c => [c.id, c]));
       const changedIds = [...rep.changed.keys()].filter(id => { const c = byId.get(id), v = rep.changed.get(id); return JSON.stringify([c.phone || "", c.phones || [], c.notes || ""]) !== JSON.stringify([v.phone, v.phones, v.notes]); });
       if (!changedIds.length && !rep.removed.size){ localStorage.setItem(PM_FLAG, JSON.stringify({ at: new Date().toISOString(), merged: [], moved: 0, notesCleaned: 0 })); return; }
+      if (rep.removed.size){   // the migration removes numbered extra rows after folding their numbers into the original: confirm first; No = nothing changes, asked again next load
+        const gone = contacts.filter(c => rep.removed.has(c.id));
+        if (!(await confirmDeletion(gone, { text: `<b>${gone.length.toLocaleString()}</b> extra number rows (like "Name 2") will be removed. Their numbers move into the original contact's phone list.` }))) return;
+      }
       // 1. backup, before anything changes
       const raw = (backend === "local" && localStorage.getItem(LS_KEY)) || JSON.stringify(all);
       try { localStorage.setItem(PM_BACKUP, raw); }
