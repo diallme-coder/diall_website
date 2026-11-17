@@ -557,6 +557,7 @@
   .phrow .ph-label{width:96px!important;flex:none;padding:8px 6px!important}
   .phrow .ph-rm{flex:none;width:38px;padding:0;justify-content:center}
   .phedit .ph-add{margin-top:6px}
+  @media (max-width:520px){ #cmpWrap{flex-basis:100%!important} }
   @media (max-width:520px){ .phrow{flex-wrap:wrap} .phrow .phnum{flex:1 1 100%} .phrow .ph-label{flex:1!important;width:auto!important} }
   .chip.ccfilter{position:relative;display:inline-flex;align-items:center;padding-right:24px}
   .chip.ccfilter::after{content:"";position:absolute;right:9px;top:50%;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg)}
@@ -764,9 +765,19 @@
     </div>
     <footer>
       <label style="display:flex;gap:6px;align-items:center;margin-right:auto;font-size:13px"><input type="checkbox" id="skipDupes" checked> Skip duplicates</label>
+      <label id="cmpWrap" style="display:flex;flex-direction:column;gap:2px;font-size:13px;flex:1 1 140px;min-width:0"><span style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmpExisting" checked> Compare to existing contacts</span><span class="note" style="margin:0 0 0 22px">Finds contacts that already exist and match 100%</span></label>
       <button type="button" class="btn" data-close>Cancel</button>
       <button type="button" class="btn primary" id="doImport" disabled>Import</button>
     </footer>
+  </div>
+</div>
+
+<!-- Import: exact-match prompt -->
+<div class="scrim" id="matchScrim">
+  <div class="modal" style="max-width:460px">
+    <header><h3 id="matchTitle">Matches found</h3></header>
+    <div class="body" id="matchBody"></div>
+    <footer id="matchFoot"></footer>
   </div>
 </div>
 
@@ -2235,7 +2246,7 @@
     updateImportBtn();
   }
   function updateImportBtn(){
-    const n = pendingImport.filter(c => !($("#skipDupes").checked && c._dupe)).length;
+    const n = pendingImport.filter(c => !($("#skipDupes").checked && !$("#cmpExisting").checked && c._dupe)).length;
     $("#doImport").disabled = !n;
     $("#doImport").textContent = n ? `Import ${n} contact${n===1?"":"s"}` : "Import";
   }
@@ -2262,25 +2273,129 @@
   drop.addEventListener("drop", e => readFile(e.dataTransfer.files[0]));
   let pasteT; $("#pasteBox").addEventListener("input", e => { clearTimeout(pasteT); const v=e.target.value; pasteT=setTimeout(()=>{ if (v.trim()) stageImport(v, ""); else { pendingImport=[]; $("#importPreview").innerHTML=""; $("#importErr").textContent=""; updateImportBtn(); } }, 300); });
 
+  // ---- compare-to-existing: an incoming contact is a 100% match when every non-empty field equals the existing one ----
+  const cmpLc = v => String(v == null ? "" : v).trim().toLowerCase().replace(/\s+/g, " ");
+  const cmpTr = v => String(v == null ? "" : v).trim();
+  const cmpNum = c => [...new Set(phoneList(c).map(p => numKey(p.number)).filter(Boolean))];
+  const cmpMail = c => emailKeys(c);
+  const cmpNameKey = c => (c.firstName || c.lastName) ? "n:" + cmpLc(c.firstName) + "|" + cmpLc(c.lastName) : (c.company ? "c:" + cmpLc(c.company) : "");
+  const cmpAddrStr = c => cmpLc(c.address || (addrHas(c.addr) ? composeAddr(c.addr) : ""));
+  const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+  function exactMatch(inc, ex){
+    if (inc.firstName && cmpLc(inc.firstName) !== cmpLc(ex.firstName)) return false;
+    if (inc.lastName && cmpLc(inc.lastName) !== cmpLc(ex.lastName)) return false;
+    const ip = cmpNum(inc); if (ip.length && !sameSet(ip, cmpNum(ex))) return false;
+    const ie = cmpMail(inc); if (ie.length && !sameSet(ie, cmpMail(ex))) return false;
+    if (addrHas(inc.addr) && addrHas(ex.addr)){
+      for (const k in ADDR_CAP) if (inc.addr[k] && cmpLc(inc.addr[k]) !== cmpLc(ex.addr[k])) return false;
+    } else if (inc.address && cmpLc(inc.address) !== cmpAddrStr(ex)) return false;
+    for (const k of ["company","jobTitle","category","website","howMet","introducedBy"]) if (inc[k] && cmpLc(inc[k]) !== cmpLc(ex[k])) return false;
+    for (const k of ["birthday","anniversary","notes"]) if (inc[k] && cmpTr(inc[k]) !== cmpTr(ex[k])) return false;
+    return true;
+  }
+  // -> Map(incoming contact -> existing contact it matches 100%); indexes existing by number, email and name so only candidates are compared
+  function findExactMatches(list){
+    const idx = new Map(), add = (k, c) => { if (!k) return; const a = idx.get(k); if (a) a.push(c); else idx.set(k, [c]); };
+    for (const c of contacts){
+      cmpNum(c).forEach(k => add("p:" + k, c)); cmpMail(c).forEach(k => add("e:" + k, c)); add(cmpNameKey(c), c);
+    }
+    const out = new Map();
+    for (const inc of list){
+      const seen = new Set();
+      const keys = cmpNum(inc).map(k => "p:" + k).concat(cmpMail(inc).map(k => "e:" + k), cmpNameKey(inc));
+      for (const k of keys){
+        for (const ex of idx.get(k) || []){
+          if (seen.has(ex)) continue; seen.add(ex);
+          if (exactMatch(inc, ex)){ out.set(inc, ex); break; }
+        }
+        if (out.has(inc)) break;
+      }
+    }
+    return out;
+  }
+  // ask once: "all" (skip all matches) | "review" | "cancel"
+  function askMatchAll(n){
+    return new Promise(res => {
+      const sc = $("#matchScrim"); let done = false;
+      const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
+      const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin("cancel"); });
+      $("#matchTitle").textContent = "Contacts already exist";
+      $("#matchBody").innerHTML = `<p style="margin:0">${n} contact${n===1?" matches an existing contact":"s match existing contacts"} exactly.</p><p class="note">Existing contacts are never changed or deleted.</p>`;
+      $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="review">Review one by one</button><button type="button" class="btn primary" data-m="all">Skip all matches</button>`;
+      $("#matchFoot").onclick = e => { const b = e.target.closest("[data-m]"); if (b) fin(b.dataset.m); };
+      openModal("#matchScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
+    });
+  }
+  // step through matches: resolves to the Set of incoming contacts to import anyway, or null if cancelled
+  function reviewMatches(items){
+    return new Promise(res => {
+      const sc = $("#matchScrim"), keep = new Set(); let i = 0, done = false;
+      const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
+      const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin(null); });
+      const line = (c) => `<div style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-top:8px"><b>${esc(fullName(c))}</b><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc([cmpNum(c).length ? phoneList(c).map(p => p.number).join(", ") : "", emailList(c).join(", "), c.company].filter(Boolean).join(" · ") || "No other details")}</div></div>`;
+      const show = () => {
+        const [inc, ex] = items[i];
+        $("#matchTitle").textContent = `${i+1} of ${items.length}`;
+        $("#matchBody").innerHTML = `<div class="note" style="margin:0">Incoming</div>${line(inc)}<div class="note" style="margin-top:12px">Already in your contacts</div>${line(ex)}`;
+        $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="skip">Skip</button><button type="button" class="btn primary" data-m="import">Import anyway</button>`;
+      };
+      $("#matchFoot").onclick = e => {
+        const b = e.target.closest("[data-m]"); if (!b) return;
+        if (b.dataset.m === "cancel") return fin(null);
+        if (b.dataset.m === "import") keep.add(items[i][0]);
+        if (++i >= items.length) fin(keep); else show();
+      };
+      show(); openModal("#matchScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
+    });
+  }
+  function syncCmpUi(){ const on = $("#cmpExisting").checked; $("#skipDupes").disabled = on; $("#skipDupes").parentElement.style.opacity = on ? ".5" : ""; updateImportBtn(); }
+  $("#cmpExisting").addEventListener("change", syncCmpUi);
+  syncCmpUi();
+
   $("#doImport").addEventListener("click", async () => {
-    const skip = $("#skipDupes").checked;
-    const toAdd = pendingImport.filter(c => !(skip && c._dupe)).map(c => { const { _dupe, ...rest } = c; return rest; });
-    if (!toAdd.length) return;
+    const compare = $("#cmpExisting").checked, skip = $("#skipDupes").checked && !compare;
+    let cand = pendingImport.filter(c => !(skip && c._dupe)).map(c => { const { _dupe, ...rest } = c; return rest; });
+    let skipped = pendingImport.length - cand.length;
+    if (!cand.length) return;
+    if (compare){
+      const found = findExactMatches(cand);
+      if (found.size){
+        const choice = await askMatchAll(found.size);
+        if (choice === "cancel") return;
+        let imp = new Set();
+        if (choice === "review"){
+          imp = await reviewMatches([...found.entries()]);
+          if (!imp) return;
+        }
+        const before = cand.length;
+        cand = cand.filter(c => !found.has(c) || imp.has(c));
+        skipped += before - cand.length;
+      }
+    }
+    const toAdd = cand;
+    if (!toAdd.length){ closeModal($("#importScrim")); toast(`Imported 0, skipped ${skipped}`); return; }
     $("#doImport").disabled = true;
     await shrinkPhotos(toAdd, n => { $("#doImport").textContent = `Preparing photos… ${n}`; });
-    contacts = contacts.concat(toAdd);
+    contacts = contacts.concat(toAdd); dataVer++;
     if (toAdd.length === 1) selectedId = toAdd[0].id;
     closeModal($("#importScrim"));
     render();
-    if (backend === "db"){
-      let n = 0;
-      for (const c of toAdd){
-        try { await dbCol.doc(c.id).set(c); n++; }
-        catch(e){ handleDbError(e); if (backend !== "db") break; if (e?.code === "quota_exceeded") break; }
-      }
-      if (backend === "local") saveLocal();
-    } else saveLocal();
-    toast(`Imported ${toAdd.length} contact${toAdd.length===1?"":"s"}`);
+    await batchSaves(async () => {
+      if (backend === "db"){
+        for (const c of toAdd){
+          try { await dbCol.doc(c.id).set(c); }
+          catch(e){ handleDbError(e); if (backend !== "db") break; if (e?.code === "quota_exceeded") break; }
+        }
+        if (backend === "local") saveLocal();
+      } else saveLocal();
+    });
+    const ids = new Set(toAdd.map(c => c.id));
+    toast(`Imported ${toAdd.length}, skipped ${skipped}`, { label: "Undo", run: async () => {
+      contacts = contacts.filter(c => !ids.has(c.id)); if (ids.has(selectedId)) selectedId = null;
+      dataVer++; nameCache.clear(); render();
+      await batchSaves(async () => { for (const id of ids) await removeStored(id); });
+      toast("Import undone");
+    } });
   });
 
   // ---------- relationship tracking ----------
