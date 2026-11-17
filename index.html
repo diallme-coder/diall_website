@@ -81,6 +81,7 @@
   .modal header h3{margin:0;font-size:16px;flex:1}
   .modal .body{padding:18px 20px}
   .modal footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  #matchFoot .btn{flex:1 1 140px;min-width:0;white-space:normal;text-align:center}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
   .field.full{grid-column:1/-1}
@@ -2313,15 +2314,15 @@
     }
     return out;
   }
-  // ask once: "all" (skip all matches) | "replace" (replace all with imported) | "review" | "cancel"
+  // ask once: "all" (Delete all new = skip imports) | "replace" (Delete all current = replace with imported) | "review" | "cancel"
   function askMatchAll(n){
     return new Promise(res => {
       const sc = $("#matchScrim"); let done = false;
       const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
       const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin("cancel"); });
       $("#matchTitle").textContent = "Contacts already exist";
-      $("#matchBody").innerHTML = `<p style="margin:0">${n} contact${n===1?" matches an existing contact":"s match existing contacts"} exactly.</p><p class="note">Skip keeps your existing contacts. Replace moves them to Recently deleted (restorable for 30 days) and imports the new ones in their place.</p>`;
-      $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="review">Review one by one</button><button type="button" class="btn" data-m="replace">Replace all with imported</button><button type="button" class="btn primary" data-m="all">Skip all matches</button>`;
+      $("#matchBody").innerHTML = `<p style="margin:0">${n} contact${n===1?" matches an existing contact":"s match existing contacts"} exactly.</p><p class="note">Choose which contact to delete. Delete current moves your existing contact to Recently deleted and imports the new one in its place. Delete new does not import the new one. Deleted contacts are restorable for 30 days.</p>`;
+      $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="review">Review one by one</button><button type="button" class="btn" data-m="replace">Delete all current</button><button type="button" class="btn primary" data-m="all">Delete all new</button>`;
       $("#matchFoot").onclick = e => { const b = e.target.closest("[data-m]"); if (b) fin(b.dataset.m); };
       openModal("#matchScrim"); mo.observe(sc, { attributes: true, attributeFilter: ["class"] });
     });
@@ -2332,12 +2333,12 @@
       const sc = $("#matchScrim"), keep = new Set(), repl = new Set(); let i = 0, done = false;
       const fin = v => { if (done) return; done = true; mo.disconnect(); closeModal(sc); res(v); };
       const mo = new MutationObserver(() => { if (!sc.classList.contains("open")) fin(null); });
-      const line = (c, h) => `<div style="min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><div class="note" style="margin:0 0 4px">${h}</div><b style="overflow-wrap:anywhere">${esc(fullName(c))}</b><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc((phoneList(c)[0] || {}).number || c.phone || emailList(c)[0] || "No number")}</div></div>`;
+      const line = (c, h) => `<div style="min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><div class="note" style="margin:0 0 4px">${h}</div><b style="overflow-wrap:anywhere">${esc(fullName(c))}</b><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc((phoneList(c)[0] || {}).number || c.phone || "No number")}</div><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc(emailList(c)[0] || "No email")}</div><div class="note" style="margin:2px 0 0;overflow-wrap:anywhere">${esc(cmpAddrStr(c) ? (c.address || composeAddr(c.addr)) : "No address")}</div></div>`;
       const show = () => {
         const [inc, ex] = items[i];
         $("#matchTitle").textContent = `${i+1} of ${items.length}`;
-        $("#matchBody").innerHTML = `<div class="matchcmp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${line(ex, "Existing")}${line(inc, "Incoming")}</div>`;
-        $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="skip">Skip</button><button type="button" class="btn" data-m="import">Import anyway</button><button type="button" class="btn primary" data-m="replace">Replace with imported</button>`;
+        $("#matchBody").innerHTML = `<div class="matchcmp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${line(ex, "Current")}${line(inc, "New")}</div>`;
+        $("#matchFoot").innerHTML = `<button type="button" class="btn" data-m="cancel">Cancel import</button><button type="button" class="btn" data-m="skip">Delete new</button><button type="button" class="btn" data-m="import">Keep both</button><button type="button" class="btn primary" data-m="replace">Delete current</button>`;
       };
       $("#matchFoot").onclick = e => {
         const b = e.target.closest("[data-m]"); if (!b) return;
@@ -2356,7 +2357,7 @@
   $("#doImport").addEventListener("click", async () => {
     const compare = $("#cmpExisting").checked, skip = $("#skipDupes").checked && !compare;
     let cand = pendingImport.filter(c => !(skip && c._dupe)).map(c => { const { _dupe, ...rest } = c; return rest; });
-    let skipped = pendingImport.length - cand.length, repl = new Set(), found = new Map();
+    let skipped = pendingImport.length - cand.length, repl = new Set(), found = new Map(), delNew = 0;
     if (!cand.length) return;
     if (compare){
       found = findExactMatches(cand);
@@ -2377,11 +2378,11 @@
           const ex = found.get(c); if (taken.has(ex)) return false;   // two incoming matching one existing: replace once
           taken.add(ex); return true;
         });
-        skipped += before - cand.length;
+        skipped += before - cand.length; delNew = before - cand.length;
       }
     }
     const toAdd = cand;
-    if (!toAdd.length){ closeModal($("#importScrim")); toast(`Imported 0, skipped ${skipped}`); return; }
+    if (!toAdd.length){ closeModal($("#importScrim")); toast(`Imported 0, deleted current 0, deleted new ${delNew}${skipped > delNew ? `, skipped ${skipped - delNew}` : ""}`); return; }
     $("#doImport").disabled = true;
     await shrinkPhotos(toAdd, n => { $("#doImport").textContent = `Preparing photos… ${n}`; });
     // replaced: the incoming contact takes the existing contact's slot; the original goes to Recently deleted (same shape trashContacts makes)
@@ -2406,7 +2407,7 @@
     });
     const ids = new Set(toAdd.map(c => c.id));
     const back = new Map(origs.map(o => [swap.get(o.id).id, o])), nRep = origs.length;
-    toast(`Imported ${toAdd.length}, replaced ${nRep}, skipped ${skipped}`, { label: "Undo", run: async () => {
+    toast(`Imported ${toAdd.length}, deleted current ${nRep}, deleted new ${delNew}`, { label: "Undo", run: async () => {
       const bid = new Set(origs.map(o => o.id));
       trash = trash.filter(c => !bid.has(c.id));
       contacts = contacts.map(c => back.get(c.id) || c).filter(c => !ids.has(c.id));
