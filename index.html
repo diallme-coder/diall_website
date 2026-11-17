@@ -248,6 +248,14 @@
   .dupitem .acts{display:flex;gap:6px;align-items:center}
   .keep{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
   .btn.sm{padding:5px 10px;font-size:12px}
+  .embar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:16px}
+  .embar .t{display:flex;align-items:center;gap:8px;min-width:0;font-weight:600}
+  .embar .t svg.i{width:16px;height:16px;flex:none}
+  .emlist{max-height:55vh;overflow:auto;margin:10px 0 0;padding:0;list-style:none}
+  .emlist li{padding:8px 0;border-bottom:1px solid var(--line);min-width:0}
+  .emlist li:last-child{border-bottom:0}
+  .emlist .nm{font-weight:600;overflow-wrap:anywhere}
+  .emlist .ad{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
   @media (max-width:560px){ .dupitem{flex-wrap:wrap} .dupitem .acts{width:100%;justify-content:flex-end} .dupwrap{padding:18px 14px 30px} }
   @media (max-width:760px){
     .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -801,6 +809,15 @@
   </div>
 </div>
 
+<!-- Email move preview modal -->
+<div class="scrim" id="emScrim">
+  <div class="modal" style="max-width:560px">
+    <header><h3 id="emTitle">Email addresses in notes</h3><button type="button" class="btn ghost" data-close aria-label="Close">✕</button></header>
+    <div class="body"><p id="emSum" style="margin:0"></p><ul class="emlist" id="emList"></ul></div>
+    <footer><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" id="emOk">Move</button></footer>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <datalist id="contactNames"></datalist>
 <datalist id="categoryList"></datalist>
@@ -822,7 +839,7 @@
 <script>
 (() => {
   // ---------- state ----------
-  const FIELDS = ["firstName","lastName","phone","phones","email","company","jobTitle","address","addr","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
+  const FIELDS = ["firstName","lastName","phone","phones","email","emails","company","jobTitle","address","addr","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
   const ITYPES = { call:{label:"Call",icon:"📞"}, email:{label:"Email",icon:"✉️"}, meeting:{label:"Meeting",icon:"🤝"}, message:{label:"Message",icon:"💬"}, other:{label:"Note",icon:"📝"} };
   const KIT = [["","Off"],["7","Every week"],["14","Every 2 weeks"],["30","Every month"],["45","Every 6 weeks"],["60","Every 2 months"],["90","Every 3 months"],["120","Every 4 months"],["180","Every 6 months"],["365","Every year"]];
   const CATEGORIES = [["Work","#2747d0"],["Students","#0e7f8f"],["Faculty","#7a4fd0"],["Vendors","#b45309"],["Friends & Family","#db2777"],["Alumni","#1c7a4b"],["Potential Employers","#c2410c"],["Important Services","#475569"]];
@@ -865,6 +882,24 @@
   }
   // every number of a contact, primary first: [{number, label, primary}]
   const phoneList = c => (c.phone ? [{ number: c.phone, label: "", primary: true }] : []).concat((c.phones || []).map(p => ({ number: p.number, label: p.label || "", primary: false })));
+  // ---- email addresses: `email` is the primary address, `emails` holds extras (strings, cap EM_MAX) ----
+  const EM_MAX = 10;
+  const validEmail = e => typeof e === "string" && !/\s/.test(e) && /^[^@]+@[^@.][^@]*\.[^@.]+$/.test(e);
+  function normEmails(list, primary){
+    const out = [], seen = new Set(), p0 = String(primary || "").trim().toLowerCase();
+    if (p0) seen.add(p0);
+    for (const v of Array.isArray(list) ? list : []){
+      const e = String(v == null ? "" : v).trim(), k = e.toLowerCase();
+      if (!validEmail(e) || seen.has(k)) continue;
+      seen.add(k); out.push(e);
+      if (out.length >= EM_MAX) break;
+    }
+    return out;
+  }
+  // every address of a contact, primary first
+  const emailList = c => (c.email ? [c.email] : []).concat(c.emails || []);
+  const emailKeys = c => [...new Set(emailList(c).map(e => String(e).trim().toLowerCase()).filter(Boolean))];
+  const emailCell = c => emailList(c).join("; ");
   const telHref = n => "tel:" + String(n).replace(/[^\d+]/g, "");
   const telType = l => ({ mobile: "CELL", home: "HOME", work: "WORK" })[String(l || "").trim().toLowerCase()] || "OTHER";
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -937,10 +972,11 @@
     for (const f of FIELDS){
       if (f === "favorite") c.favorite = !!raw.favorite && raw.favorite !== "false";
       else if (f === "tags") c.tags = tagList(raw);
-      else if (f === "phones" || f === "addr") continue;
+      else if (f === "phones" || f === "addr" || f === "emails") continue;
       else c[f] = raw[f] == null ? "" : String(raw[f]).trim();
     }
     c.phones = normPhones(raw.phones, c.phone);
+    c.emails = normEmails(raw.emails, c.email);
     if (raw.addr && typeof raw.addr === "object"){   // structured address wins; the display line is always recomposed from it
       const a = normAddr(raw.addr);
       if (addrHas(a)){ c.addr = a; c.address = composeAddr(a); } else c.address = "";
@@ -1094,7 +1130,7 @@
       if (countryFilter && (countryFilter === "none" ? phoneCountry(c) : phoneCountry(c) !== countryFilter)) return false;
       if (filter.startsWith("tag:") && !tagList(c).includes(filter.slice(4))) return false;
       if (!q) return true;
-      const hay = [cachedName(c), c.phone, ...(c.phones || []).map(p => p.number + " " + p.label), c.email, c.company, c.jobTitle, c.address, c.notes, ...tagList(c)].join(" ").toLowerCase();
+      const hay = [cachedName(c), c.phone, ...(c.phones || []).map(p => p.number + " " + p.label), c.email, ...(c.emails || []), c.company, c.jobTitle, c.address, c.notes, ...tagList(c)].join(" ").toLowerCase();
       const digits = q.replace(/\D/g,"");
       return hay.includes(q) || (digits.length >= 3 && phoneList(c).some(p => p.number.replace(/\D/g,"").includes(digits)));
     });
@@ -1197,7 +1233,7 @@
       <div class="card">
         ${row("Next follow-up", c.nextFollowUp ? `<b class="${c.nextFollowUp < today() ? "overdue" : ""}">${fmtShort(c.nextFollowUp)}</b> <span class="muted">· ${followWhen(c.nextFollowUp)}</span>${c.followUpNote ? `<div class="fnote">${esc(c.followUpNote)}</div>` : ""}` : (c.followUpNote ? esc(c.followUpNote) : ""), "nextFollowUp")}
         ${row("Phone", phoneList(c).length ? phoneList(c).map(p => p.primary ? `<div class="phl1">${phoneDisplay(c)}<a href="${esc(telHref(p.number))}">${esc(p.number)}</a>${(() => { const q = phoneParts(p.number); return q.iso ? ` <span class="ccname">${esc(CBY[q.iso].name)}${q.intl ? "" : " · assumed"}</span>` : ""; })()}</div>` : `<div class="phl1 ext">${p.label ? `<span class="phtag${/^old$/i.test(p.label) ? " old" : ""}">${esc(p.label)}</span>` : ""}<a href="${esc(telHref(p.number))}">${esc(p.number)}</a></div>`).join("") : "", "phone")}
-        ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "", "email")}
+        ${row("Email", emailList(c).map((e, i) => `<div class="phl1${i ? " ext" : ""}"><a href="mailto:${esc(e)}">${esc(e)}</a></div>`).join(""), "email")}
         ${row("Company", esc(c.company), "company")}
         ${row("Job title", esc(c.jobTitle), "jobTitle")}
         ${row("Address", addrBlock(c), "address")}
@@ -1242,8 +1278,7 @@
     const byName = new Map(), byEmail = new Map(), viaEmail = new Set();
     for (const c of contacts){
       const k = nameKey(c); if (k){ if (byName.has(k)) union(byName.get(k), c.id); else byName.set(k, c.id); }
-      const e = String(c.email||"").trim().toLowerCase();
-      if (e){ if (!byEmail.has(e)) byEmail.set(e, []); byEmail.get(e).push(c); }
+      for (const e of emailKeys(c)){ if (!byEmail.has(e)) byEmail.set(e, []); byEmail.get(e).push(c); }
     }
     for (const list of byEmail.values())
       for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++)
@@ -1318,6 +1353,7 @@
       : (isPhone ? "Contacts sharing the same phone number appear here." : "Contacts with the same name appear here — and look-alikes such as “J. Smith” and “John Smith” when their email matches.");
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>${title}</h2><p>${sub}</p></div>
       ${all.length > 1 ? `<button class="btn primary" data-dact="mergeAll">Merge all ${all.length} groups</button>` : ""}</div>`;
+    { const ep = emPlanCached(); if (ep.length) h += `<div class="embar" role="status"><span class="t">${ic("mail")}<span>${ep.length} contact${ep.length === 1 ? " has" : "s have"} email addresses in notes</span></span><button class="btn sm primary" data-dact="emReview">Review and move</button></div>`; }
     if (!all.length){
       h += `<div class="card" style="text-align:center;padding:40px 20px"><div style="font-size:36px">✅</div>
         <h3 style="margin:10px 0 4px">No duplicate ${isPhone ? "numbers" : "names"}</h3>
@@ -1358,7 +1394,7 @@
     const extraNotes = [];
     for (const o of others){
       for (const f of FIELDS){
-        if (f === "tags" || f === "favorite" || f === "notes" || f === "phones") continue;
+        if (f === "tags" || f === "favorite" || f === "notes" || f === "phones" || f === "emails") continue;
         if (f === "addr"){ if (!addrHas(m.addr) && addrHas(o.addr)){ m.addr = o.addr; m.address = o.address; } continue; }
         if (f === FIELDS[0]) for (const k of ["photo","icon","avatarColor"]) if (!m[k] && o[k]) m[k] = o[k];
         if (!m[f] && o[f]) m[f] = o[f];
@@ -1368,7 +1404,7 @@
       const seen = new Set((m.interactions||[]).map(i => i.extId || i.id));
       m.interactions = [...(m.interactions||[]), ...(o.interactions||[]).filter(i => !seen.has(i.extId || i.id))];
       m.phones = normPhones((m.phones || []).concat(o.phone ? [{ number: o.phone, label: "Other" }] : [], o.phones || []), m.phone);
-      if (o.email && o.email.toLowerCase() !== String(m.email).toLowerCase()) extraNotes.push("Other email: " + o.email);
+      m.emails = normEmails((m.emails || []).concat(o.email && o.email.toLowerCase() !== String(m.email).toLowerCase() ? [o.email] : [], o.emails || []), m.email);
       if (o.notes && !String(m.notes).includes(o.notes)) extraNotes.push(o.notes);
     }
     const uniq = [...new Set(extraNotes)].filter(n => !String(m.notes).includes(n));
@@ -1404,6 +1440,7 @@
 
   function handleDup(btn){
     const act = btn.dataset.dact;
+    if (act === "emReview"){ openEmailPreview(); return; }
     if (act === "view"){ setView("contacts"); selectedId = btn.dataset.id; render(); return; }
     if (act === "delete"){ const c = contacts.find(x => x.id === btn.dataset.id); if (c) confirmDelete(c); return; }
     if (act === "merge"){
@@ -1422,6 +1459,99 @@
         `Each of the <b>${plans.length}</b> groups will be merged into the contact marked Keep, and <b>${n}</b> duplicate contacts will move to Recently deleted for ${TRASH_DAYS} days.`,
         "Merge all", () => runMerges(plans.map(({keepId, removeIds}) => ({keepId, removeIds}))));
     }
+  }
+
+  // ---------- email addresses written in Notes -> email / emails ----------
+  // Preview first, write only on "Move". No automatic migration on load (no "cm.emails.v1" flag): nothing changes unless the user clicks Move.
+  const EM_BACKUP = "contact-manager.backup.pre-emails";
+  const EM_RE = /(?:(?<![A-Za-z])(?:e-?mail|courriel|mail)\s*(?:\([^)]*\))?\s*\\?[:=]?\s*)?[<(]?([A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,})[>)]?/gi;
+  const EM_SEG = /(\s\/\s|\s\/$|\n)/;
+  const emTidy = t => t.replace(/\(\s*\)|<\s*>/g, " ").replace(/[ \t]{2,}/g, " ").replace(/([,;])(\s*[,;])+/g, "$1").replace(/\s+([,;])/g, "$1").replace(/^[\s,;\/]+|[\s,;\/]+$/g, "").replace(/(?:^|\s)[A-Za-zÀ-ÿ]+\s*\\?:$/, "").replace(/^[\s,;\/]+|[\s,;\/]+$/g, "");
+  // pure: what would move for one contact -> { email, emails, notes, moved } or null
+  function emPlanOne(c){
+    const notes = String(c.notes || "");
+    if (!notes.includes("@")) return null;
+    const have = new Set(emailKeys(c)), parts = notes.split(EM_SEG), found = [], seenNew = new Set();
+    const segs = [];
+    for (let i = 0; i < parts.length; i += 2) segs.push({ t: parts[i], sep: parts[i + 1] || "", hits: [] });
+    for (const sg of segs){
+      const m0 = FN_NOTE_PHONE.exec(sg.t.trim());
+      if (m0 && fnSplit(m0[2], ";,").map(fnToken).filter(Boolean).length) continue;   // label-number segment owned by the phones migration
+      EM_RE.lastIndex = 0; let m;
+      while ((m = EM_RE.exec(sg.t))){
+        const a = m[1], k = a.toLowerCase();
+        let ws = m.index; while (ws > 0 && !/\s/.test(sg.t[ws - 1])) ws--;
+        let we = m.index + m[0].length; while (we < sg.t.length && !/\s/.test(sg.t[we])) we++;
+        if (/(?:^|[^a-z])(?:https?:|www\.)|:\/\//i.test(sg.t.slice(ws, we))) continue;   // inside a URL
+        if (have.has(k)) continue;                                                       // already on the contact: leave the note alone
+        sg.hits.push({ s: m.index, e: m.index + m[0].length, a, k });
+      }
+    }
+    // decide which new addresses fit (primary slot, then up to EM_MAX extras); the rest stay in the note
+    let room = EM_MAX - (c.emails || []).length, primaryFree = !c.email;
+    const accept = new Map();
+    for (const sg of segs) for (const h of sg.hits){
+      if (accept.has(h.k)) continue;
+      if (primaryFree){ accept.set(h.k, h.a); primaryFree = false; continue; }
+      if (room > 0){ accept.set(h.k, h.a); room--; continue; }
+    }
+    if (!accept.size) return null;
+    const order = [...accept.values()];
+    const out = [];
+    segs.forEach((sg, idx) => {
+      let t = sg.t, touched = false;
+      for (const h of sg.hits.slice().reverse()) if (accept.has(h.k)){ t = t.slice(0, h.s) + " " + t.slice(h.e); touched = true; }
+      if (touched){ t = emTidy(t); if (!t) return; }
+      out.push({ t, sep: sg.sep, idx });
+    });
+    const nn = out.map((x, i) => x.t + (i < out.length - 1 ? x.sep : "")).join("");
+    const email = c.email || order[0];
+    const extra = c.email ? order : order.slice(1);
+    return { email, emails: normEmails((c.emails || []).concat(extra), email), notes: nn.replace(/[ \t\/]+$/, "").replace(/^[ \t]+/, ""), moved: order };
+  }
+  function emPlan(list){
+    const out = [];
+    for (const c of list){ const r = emPlanOne(c); if (r) out.push({ c, ...r }); }
+    return out;
+  }
+  let emMemo = null;
+  function emPlanCached(){
+    if (emMemo && emMemo.ver === dataVer && emMemo.ref === contacts && emMemo.len === contacts.length) return emMemo.out;
+    emMemo = { ver: dataVer, ref: contacts, len: contacts.length, out: emPlan(contacts) };
+    return emMemo.out;
+  }
+  let emCur = null;
+  function openEmailPreview(){
+    const plan = emPlan(contacts); emCur = plan;
+    if (!plan.length){ toast("No email addresses found in notes"); return; }
+    const n = plan.reduce((s, x) => s + x.moved.length, 0);
+    $("#emTitle").textContent = "Email addresses in notes";
+    $("#emSum").innerHTML = `<b>${n}</b> address${n === 1 ? "" : "es"} from <b>${plan.length}</b> contact${plan.length === 1 ? "" : "s"} will move out of Notes. The first fills an empty email field; the rest go to extra emails.`;
+    $("#emList").innerHTML = plan.map(x => `<li><div class="nm">${esc(fullName(x.c))}</div><div class="ad">${x.moved.map(a => esc(a)).join(", ")}${x.c.email ? "" : " <span title=\"Becomes the main email\">(main)</span>"}</div></li>`).join("");
+    $("#emOk").textContent = `Move ${n} address${n === 1 ? "" : "es"}`;
+    $("#emOk").onclick = () => applyEmailMove();
+    openModal("#emScrim");
+  }
+  async function applyEmailMove(){
+    const plan = emCur || []; closeModal($("#emScrim"));
+    if (!plan.length) return;
+    try { if (!localStorage.getItem(EM_BACKUP) && backend === "local") localStorage.setItem(EM_BACKUP, localStorage.getItem(LS_KEY) || "[]"); } catch(e){}
+    const now = new Date().toISOString(), prev = new Map(), list = [];
+    for (const x of plan){
+      const c = contacts.find(k => k.id === x.c.id); if (!c) continue;
+      prev.set(c.id, { email: c.email, emails: c.emails, notes: c.notes, updatedAt: c.updatedAt });
+      c.email = x.email; c.emails = x.emails; c.notes = x.notes; c.updatedAt = now; list.push(c);
+    }
+    dataVer++; render();
+    await batchSaves(async () => { for (const c of list) await persist(c); });
+    const n = plan.reduce((s, x) => s + x.moved.length, 0);
+    toast(`Moved ${n} address${n === 1 ? "" : "es"} from ${list.length} contact${list.length === 1 ? "" : "s"}`, { label: "Undo", run: async () => {
+      const back = [];
+      for (const c of contacts){ const v = prev.get(c.id); if (v){ Object.assign(c, v); back.push(c); } }
+      dataVer++; render();
+      await batchSaves(async () => { for (const c of back) await persist(c); });
+      toast("Undone");
+    } });
   }
 
   // ---------- views & routing ----------
@@ -1496,7 +1626,7 @@
     $("#editTitle").textContent = title || (c ? "Edit contact" : "New contact");
     $("#editErr").textContent = "";
     for (const f of FIELDS){
-      if (f === "phones" || f === "addr" || f === "address") continue;
+      if (f === "phones" || f === "addr" || f === "address" || f === "emails") continue;
       const el = $("#f_"+f);
       if (f === "favorite") el.checked = !!src?.favorite;
       else if (f === "tags") el.value = src ? tagList(src).join(", ") : "";
@@ -1539,7 +1669,7 @@
   $("#editForm").addEventListener("submit", async e => {
     e.preventDefault();
     const raw = {};
-    for (const f of FIELDS){ if (f === "phones" || f === "addr" || f === "address") continue; const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    for (const f of FIELDS){ if (f === "phones" || f === "addr" || f === "address" || f === "emails") continue; const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
     raw.addr = readAddr(k => $("#f_addr_"+k).value);
     raw.phone = readPhone($("#f_phone"));
     raw.phones = readPhones($("#phEdit"));
@@ -1582,7 +1712,7 @@
     return FIELDS.some(k => k === "favorite" ? !!raw[k] !== !!c[k]
       : k === "phones" ? raw.phones !== undefined && pkey(raw.phones) !== pkey(c.phones)
       : k === "addr" ? raw.addr !== undefined && composeAddr(normAddr(raw.addr)) !== (c.address || "")
-      : k === "address" ? false
+      : k === "address" || k === "emails" ? false
       : k === "tags" ? tagList(raw).join(",") !== tagList(c).join(",")
       : String(raw[k] ?? "").trim() !== String(c[k] ?? ""));
   }
@@ -1659,7 +1789,7 @@
   const csvCell = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   function toCSV(items){
     const lines = [CSV_COLS.map(c=>c[1]).join(",")];
-    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="phone" ? phoneCell(c) : k==="favorite" ? (c.favorite?"yes":"") : k==="_last" ? lastContacted(c) : k==="_strength" ? strength(c) : c[k])).join(","));
+    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="phone" ? phoneCell(c) : k==="email" ? emailCell(c) : k==="favorite" ? (c.favorite?"yes":"") : k==="_last" ? lastContacted(c) : k==="_strength" ? strength(c) : c[k])).join(","));
     return lines.join("\r\n");
   }
   function toJSON(items){
@@ -1674,7 +1804,7 @@
       if (c.company) L.push(`ORG:${vEsc(c.company)}`);
       if (c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
       for (const p of phoneList(c)) L.push(`TEL;TYPE=${p.primary ? "CELL" : telType(p.label)}:${vEsc(p.number)}`);
-      if (c.email) L.push(`EMAIL;TYPE=INTERNET:${vEsc(c.email)}`);
+      for (const e of emailList(c)) L.push(`EMAIL;TYPE=INTERNET:${vEsc(e)}`);
       { const ad = adrLine(c, ";TYPE=HOME"); if (ad) L.push(ad); }
       if (c.birthday) L.push(`BDAY:${c.birthday}`);
       if (c.anniversary) L.push(`X-ANNIVERSARY:${c.anniversary}`);
@@ -1828,7 +1958,7 @@
             else (o.phones || (o.phones = [])).push({ number: num, label: /CELL|MOBILE/i.test(m[2]) ? "Mobile" : /HOME/i.test(m[2]) ? "Home" : /WORK/i.test(m[2]) ? "Work" : "Other" });
             break;
           }
-          case "EMAIL": if (!o.email) o.email = vUnesc(val); break;
+          case "EMAIL": { const ev = vUnesc(val).trim(); if (!o.email) o.email = ev; else if (ev) (o.emails || (o.emails = [])).push(ev); break; }
           case "ORG": o.company = vUnesc(val.split(";").filter(Boolean).join(", ")); break;
           case "TITLE": o.jobTitle = vUnesc(val); break;
           case "ADR": if (!o.address) o.address = val.split(";").map(vUnesc).filter(s=>s.trim()).join(", "); break;
@@ -2322,7 +2452,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
   };
   const pickerSupported = () => "contacts" in navigator && "ContactsManager" in window && typeof navigator.contacts.select === "function";
   const existingKeys = () => {
-    const emails = new Set(contacts.map(c => String(c.email||"").trim().toLowerCase()).filter(Boolean));
+    const emails = new Set(contacts.flatMap(emailKeys));
     const phones = new Set(contacts.flatMap(phoneKeys));
     const names = new Set(contacts.map(nameKey).filter(Boolean));
     return c => (c.email && emails.has(c.email.trim().toLowerCase())) || phoneKeys(c).some(k => phones.has(k)) || (!c.email && !phoneKey(c) && nameKey(c) && names.has(nameKey(c)));
@@ -3201,7 +3331,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
 
   // ---------- Outlook CSV ----------
   const OUTLOOK_COLS = [["First Name", c => c.firstName], ["Last Name", c => c.lastName], ["Company", c => c.company], ["Job Title", c => c.jobTitle],
-    ["E-mail Address", c => c.email], ["Mobile Phone", c => phoneCell(c)], ["Home Street", c => c.address], ["Birthday", c => c.birthday], ["Anniversary", c => c.anniversary],
+    ["E-mail Address", c => emailCell(c)], ["Mobile Phone", c => phoneCell(c)], ["Home Street", c => c.address], ["Birthday", c => c.birthday], ["Anniversary", c => c.anniversary],
     ["Web Page", c => c.website], ["Referred By", c => c.introducedBy], ["Categories", c => [c.category, ...tagList(c)].filter(Boolean).join(";")],
     ["Notes", c => [c.notes, c.howMet ? "How we met: " + c.howMet : "", c.nextFollowUp ? `Next follow-up: ${c.nextFollowUp}${c.followUpNote ? " — " + c.followUpNote : ""}` : ""].filter(Boolean).join("\n")]];
   function toOutlook(items){ return [OUTLOOK_COLS.map(c => c[0]).join(","), ...items.map(c => OUTLOOK_COLS.map(([, f]) => csvCell(f(c) || "")).join(","))].join("\r\n"); }
@@ -3213,7 +3343,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     return list.map(c => {
       const L = [fullName(c)];
       if (shareOn.phone) for (const p of phoneList(c)) L.push((p.label ? `Phone (${p.label}): ` : "Phone: ") + p.number);
-      if (shareOn.email && c.email) L.push("Email: " + c.email);
+      if (shareOn.email) for (const e of emailList(c)) L.push("Email: " + e);
       if (shareOn.work && (c.jobTitle || c.company)) L.push([c.jobTitle, c.company].filter(Boolean).join(", "));
       if (shareOn.address && c.address) L.push("Address: " + c.address);
       if (shareOn.website && c.website) L.push("Web: " + c.website);
@@ -3226,7 +3356,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     return list.map(c => {
       const L = ["BEGIN:VCARD","VERSION:3.0",`N:${vEsc(c.lastName)};${vEsc(c.firstName)};;;`,`FN:${vEsc(fullName(c))}`];
       if (shareOn.phone) for (const p of phoneList(c)) L.push(`TEL;TYPE=${p.primary ? "CELL" : telType(p.label)}:${vEsc(p.number)}`);
-      if (shareOn.email && c.email) L.push(`EMAIL:${vEsc(c.email)}`);
+      if (shareOn.email) for (const e of emailList(c)) L.push(`EMAIL:${vEsc(e)}`);
       if (shareOn.work && c.company) L.push(`ORG:${vEsc(c.company)}`);
       if (shareOn.work && c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
       if (shareOn.address) { const ad = adrLine(c, ""); if (ad) L.push(ad); }
