@@ -275,6 +275,8 @@
   .emlist li:last-child{border-bottom:0}
   .emlist .nm{font-weight:600;overflow-wrap:anywhere}
   .emlist .ad{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+  .ccrefresh{margin-top:14px}
+  @media (max-width:560px){ .ccrefresh .btn{width:100%;justify-content:center} }
   @media (max-width:560px){ .dupitem{flex-wrap:wrap} .dupitem .acts{width:100%;justify-content:flex-end} .dupwrap{padding:18px 14px 30px} }
   @media (max-width:760px){
     .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -1441,7 +1443,7 @@
       <div class="stored">${esc(b.stored)}</div><div class="why">${esc(b.why)}${b.sugg ? ` · suggested ${esc(b.sugg)}` : ""}</div>
       <div class="ed"><input class="cc-in" type="text" inputmode="tel" aria-label="Corrected number" value="${esc(b.sugg || b.fixed)}"><button class="btn sm primary" data-cc="save">Save</button><button class="btn sm danger" data-cc="remove">Remove</button></div></div>`).join("");
     if (rows.length > 300) h += `<p style="padding:8px 18px 14px;margin:0;color:var(--muted);font-size:13px">Showing 300 of ${rows.length}. Fix some, or filter to see the rest.</p>`;
-    h += `</div></div>`;
+    h += `</div><div class="ccrefresh"><button class="btn" data-cc="refresh">Refresh</button></div></div>`;
     const hadFocus = document.activeElement?.id === "ccSearch", top = $("#main").scrollTop;
     $("#main").innerHTML = h;
     $("#main").scrollTop = top;
@@ -1483,10 +1485,23 @@
     await batchSaves(async () => { await persist(c); });
     if (remove) ccUndoToast("Number removed", prev); else toast(ccWhy(val) ? "Saved — still not in the right format" : "Saved");
   }
+  // Refresh: read-only re-check of the live store (memo bypassed); no storage writes, no auto-correct
+  function ccRefresh(){
+    ccMemo = null;
+    const se = $("#ccSearch"); if (se) ccQuery = se.value;
+    const typed = new Map(); document.querySelectorAll("#main .ccrow").forEach(r => typed.set(r.dataset.id + "|" + r.dataset.idx, r.querySelector(".cc-in").value));
+    const a = ccAnalyze();
+    let n = 0;
+    for (const c of contacts){ if (String(c.phone || "").trim()) n++; for (const p of (c.phones || [])) if (String(p.number || "").trim()) n++; }
+    renderCountryFix();
+    document.querySelectorAll("#main .ccrow").forEach(r => { const v = typed.get(r.dataset.id + "|" + r.dataset.idx); if (v != null) r.querySelector(".cc-in").value = v; });
+    toast(`Checked ${n} number${n === 1 ? "" : "s"}: ${a.bad.length} need correction`);
+  }
   function handleCC(b){
     const k = b.dataset.cc;
     if (k === "preview"){ ccPreview = !ccPreview; renderCountryFix(); }
     else if (k === "apply") ccApply();
+    else if (k === "refresh") ccRefresh();
     else ccRow(b.closest(".ccrow"), k === "remove");
   }
   let ccSearchT;
