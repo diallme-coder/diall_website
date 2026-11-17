@@ -248,6 +248,25 @@
   .dupitem .acts{display:flex;gap:6px;align-items:center}
   .keep{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
   .btn.sm{padding:5px 10px;font-size:12px}
+  .ccrules{list-style:none;margin:8px 0 12px;padding:0}
+  .ccrules li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .ccrules li:last-child{border-bottom:0}
+  .ccrules b{font-variant-numeric:tabular-nums}
+  .ccbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .ccprev{max-height:40vh;overflow:auto;margin:0 0 12px;padding:0;list-style:none;border:1px solid var(--line);border-radius:9px}
+  .ccprev li{padding:7px 12px;border-bottom:1px solid var(--line);min-width:0;overflow-wrap:anywhere;font-size:13px}
+  .ccprev li:last-child{border-bottom:0}
+  .ccprev .nm,.ccrow .nm{font-weight:600}
+  .ccprev .ar{color:var(--muted)}
+  .ccrow{padding:10px 16px;border-bottom:1px solid var(--line);min-width:0}
+  .ccrow:last-child{border-bottom:0}
+  .ccrow .top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .ccrow .nm{overflow-wrap:anywhere}
+  .ccrow .fld{font-size:12px;color:var(--muted)}
+  .ccrow .stored{font-size:13px;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}
+  .ccrow .why{font-size:12px;color:var(--danger);margin-top:2px}
+  .ccrow .ed{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .ccrow .cc-in{flex:1 1 160px;min-width:0;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
   .embar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:16px}
   .embar .t{display:flex;align-items:center;gap:8px;min-width:0;font-weight:600}
   .embar .t svg.i{width:16px;height:16px;flex:none}
@@ -684,6 +703,10 @@
   <button data-view="dup-name" aria-label="Duplicate names">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></svg><span class="badge" id="badgeName"></span></span>
     <span><span class="full">Duplicate names</span><span class="short">Names</span></span>
+  </button>
+  <button data-view="country-fix" aria-label="Country fix">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+    <span><span class="full">Country fix</span><span class="short">Country</span></span>
   </button>
 </nav>
 
@@ -1340,6 +1363,127 @@
     });
   }
 
+
+  // ---------- Country fix: auto-correct number prefixes, report numbers still in the wrong format ----------
+  const CC_RULES = [["00213", "+213"], ["00224", "+224"], ["00221", "+221"], ["001", "+1"]];
+  let ccQuery = "", ccPreview = false, ccMemo = null;
+  // returns { n: corrected number, minus: bool, rule: index|-1 }
+  function ccFix(raw){
+    let n = String(raw || "").trim(), minus = false, rule = -1;
+    const m = n.replace(/(?<=\d)-(?=\d)/g, ""); if (m !== n){ minus = true; n = m; }
+    for (let i = 0; i < CC_RULES.length; i++){
+      const pre = CC_RULES[i][0]; let k = 0, j = 0;
+      while (j < n.length && k < pre.length){ const ch = n[j]; if (ch === pre[k]) k++; else if (ch !== " " && ch !== ".") break; j++; }
+      if (k === pre.length){ n = CC_RULES[i][1] + n.slice(j); rule = i; break; }
+    }
+    return { n, minus, rule };
+  }
+  // why a number is in the wrong format ("" when it is correct)
+  function ccWhy(n){
+    const c = n.replace(/[\s().\-]/g, "");
+    if (/^\+\d{7,15}$/.test(c)) return "";
+    if (/[A-Za-z]/.test(c)) return "contains letters";
+    if (/[^\d+]/.test(c) || (c.indexOf("+") > 0) || (c.lastIndexOf("+") > 0)) return "contains symbols, not a phone number";
+    const d = c.replace(/\D/g, "").length;
+    if (c[0] !== "+"){
+      if (c.startsWith("00")) return "leading 00 not in the list";
+      if (d < 7) return "too short";
+      return c[0] === "0" ? "no country code (starts with 0)" : "no country code";
+    }
+    return d < 7 ? "too short" : d > 15 ? "too long" : "invalid number";
+  }
+  function ccAnalyze(){
+    if (ccMemo && ccMemo.ver === dataVer && ccMemo.ref === contacts) return ccMemo;
+    const cnt = [0, 0, 0, 0, 0], changes = [], bad = [];   // cnt: minus, 00213, 00224, 001, 00221 (display order)
+    const slot = [1, 2, 4, 3];
+    for (const c of contacts){
+      const nm = fullName(c);
+      const each = (num, idx, label) => {
+        if (!String(num || "").trim()) return;
+        const f = ccFix(num);
+        if (f.n !== String(num)){
+          if (f.minus) cnt[0]++;
+          if (f.rule >= 0) cnt[slot[f.rule]]++;
+          changes.push({ c, nm, idx, label, old: num, n: f.n });
+        }
+        const why = ccWhy(f.n);
+        if (why) bad.push({ c, nm, idx, label, stored: num, fixed: f.n, why });
+      };
+      each(c.phone, -1, "Primary");
+      (c.phones || []).forEach((p, i) => each(p.number, i, p.label || "Other"));
+    }
+    return (ccMemo = { ver: dataVer, ref: contacts, cnt, changes, bad });
+  }
+  function renderCountryFix(){
+    $("#app").classList.remove("viewing");
+    const a = ccAnalyze(), q = ccQuery.toLowerCase().trim();
+    const rows = q ? a.bad.filter(b => (b.nm + " " + b.stored).toLowerCase().includes(q)) : a.bad;
+    const N = a.changes.length, nc = new Set(a.changes.map(x => x.c.id)).size;
+    const L = ["Remove minus signs", "00213 → +213", "00224 → +224", "001 → +1", "00221 → +221"];
+    let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Country fix</h2><p>Numbers should look like +&lt;country code&gt;&lt;number&gt;, 7 to 15 digits.</p></div></div>
+      <div class="card"><h3 style="margin:12px 0 0">Auto-correct</h3>
+      <ul class="ccrules">${L.map((l, i) => `<li><span>${l}</span><b>${a.cnt[i]}</b></li>`).join("")}</ul>
+      <div class="ccbtns"><button class="btn" data-cc="preview" ${N ? "" : "disabled"}>${ccPreview ? "Hide preview" : "Preview"}</button><button class="btn primary" data-cc="apply" ${N ? "" : "disabled"}>${N ? `Apply ${N} change${N === 1 ? "" : "s"}` : "Nothing to correct"}</button></div>`;
+    if (ccPreview && N) h += `<ul class="ccprev">${a.changes.slice(0, 500).map(x => `<li><span class="nm">${esc(x.nm)}</span> <span class="fld">(${esc(x.label)})</span><br>${esc(x.old)} <span class="ar">→</span> ${esc(x.n)}</li>`).join("")}${N > 500 ? `<li>…and ${N - 500} more</li>` : ""}</ul>`;
+    h += `</div><div class="card" style="padding:6px 0 0"><h3 style="margin:12px 18px 4px">Needs correction · ${a.bad.length}</h3>
+      <p style="margin:0 18px 10px;color:var(--muted);font-size:13px">Numbers still in the wrong format after the rules above. Edit and Save, or Remove junk.</p>
+      <div style="padding:0 16px"><input class="dupsearch" id="ccSearch" type="search" placeholder="Filter by name or number…" value="${esc(ccQuery)}"></div>`;
+    if (!a.bad.length) h += `<p style="padding:6px 18px 18px;margin:0;color:var(--muted)">${contacts.length ? "Every number is in the right format." : "Add or import contacts first."}</p>`;
+    else if (!rows.length) h += `<p style="padding:6px 18px 18px;margin:0;color:var(--muted)">No numbers match “${esc(ccQuery)}”.</p>`;
+    h += rows.slice(0, 300).map(b => `<div class="ccrow" data-id="${esc(b.c.id)}" data-idx="${b.idx}"><div class="top"><span class="nm">${esc(b.nm)}</span><span class="fld">${esc(b.label)}</span></div>
+      <div class="stored">${esc(b.stored)}</div><div class="why">${esc(b.why)}</div>
+      <div class="ed"><input class="cc-in" type="text" inputmode="tel" aria-label="Corrected number" value="${esc(b.fixed)}"><button class="btn sm primary" data-cc="save">Save</button><button class="btn sm danger" data-cc="remove">Remove</button></div></div>`).join("");
+    if (rows.length > 300) h += `<p style="padding:8px 18px 14px;margin:0;color:var(--muted);font-size:13px">Showing 300 of ${rows.length}. Fix some, or filter to see the rest.</p>`;
+    h += `</div></div>`;
+    const hadFocus = document.activeElement?.id === "ccSearch", top = $("#main").scrollTop;
+    $("#main").innerHTML = h;
+    $("#main").scrollTop = top;
+    if (hadFocus){ const el = $("#ccSearch"); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }
+  const ccSnap = c => ({ phone: c.phone, phones: JSON.parse(JSON.stringify(c.phones || [])), updatedAt: c.updatedAt });
+  function ccUndoToast(msg, prev){
+    toast(msg, { label: "Undo", run: async () => {
+      const back = [];
+      for (const c of contacts){ const v = prev.get(c.id); if (v){ c.phone = v.phone; c.phones = v.phones; c.updatedAt = v.updatedAt; back.push(c); } }
+      dataVer++; render();
+      await batchSaves(async () => { for (const c of back) await persist(c); });
+      toast("Undone");
+    } });
+  }
+  async function ccApply(){
+    const a = ccAnalyze(); if (!a.changes.length) return;
+    const prev = new Map(), list = [], now = new Date().toISOString();
+    for (const x of a.changes){
+      const c = x.c; if (!prev.has(c.id)){ prev.set(c.id, ccSnap(c)); list.push(c); }
+      if (x.idx < 0) c.phone = x.n; else c.phones[x.idx].number = x.n;
+    }
+    for (const c of list) c.updatedAt = now;
+    ccPreview = false; dataVer++; render();
+    await batchSaves(async () => { for (const c of list) await persist(c); });
+    ccUndoToast(`Corrected ${a.changes.length} number${a.changes.length === 1 ? "" : "s"} in ${list.length} contact${list.length === 1 ? "" : "s"}`, prev);
+  }
+  async function ccRow(row, remove){
+    const c = contacts.find(k => k.id === row.dataset.id), idx = +row.dataset.idx; if (!c) return;
+    const cur = idx < 0 ? c.phone : (c.phones[idx] || {}).number; if (cur == null) return;
+    const val = remove ? "" : ccFix(row.querySelector(".cc-in").value).n;
+    if (!remove && !val){ toast("Enter a number, or use Remove"); return; }
+    const prev = new Map([[c.id, ccSnap(c)]]);
+    if (remove){
+      if (idx < 0){ const nx = (c.phones || []).shift(); c.phone = nx ? nx.number : ""; }
+      else c.phones.splice(idx, 1);
+    } else if (idx < 0) c.phone = val; else c.phones[idx].number = val;
+    c.updatedAt = new Date().toISOString(); dataVer++; render();
+    await batchSaves(async () => { await persist(c); });
+    if (remove) ccUndoToast("Number removed", prev); else toast(ccWhy(val) ? "Saved — still not in the right format" : "Saved");
+  }
+  function handleCC(b){
+    const k = b.dataset.cc;
+    if (k === "preview"){ ccPreview = !ccPreview; renderCountryFix(); }
+    else if (k === "apply") ccApply();
+    else ccRow(b.closest(".ccrow"), k === "remove");
+  }
+  let ccSearchT;
+
   function renderDups(){
     $("#app").classList.remove("viewing");
     const kind = view, isPhone = kind === "dup-phone";
@@ -1556,7 +1700,7 @@
 
   // ---------- views & routing ----------
   let view = "contacts";
-  const HASH = { "review": "weekly-review", "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names" };
+  const HASH = { "review": "weekly-review", "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names", "country-fix": "country-fix" };
   function viewFromHash(){ const h = location.hash.slice(1); return Object.keys(HASH).find(k => HASH[k] === h) || "contacts"; }
   function setView(v){
     view = v;
@@ -1571,7 +1715,7 @@
     const b = e.target.closest("[data-view]"); if (!b) return;
     const v = b.dataset.view;
     if (v === "contacts" && view === "contacts" && selectedId && matchMedia("(max-width:760px)").matches) selectedId = null;
-    leaveInline(() => { setView(v); dupQuery = ""; render(); $("#main").scrollTop = 0; });
+    leaveInline(() => { setView(v); dupQuery = ""; ccQuery = ""; ccPreview = false; render(); $("#main").scrollTop = 0; });
   });
 
   let sidebarStale = false, namesMemo = null, namesVer = -1;
@@ -1579,7 +1723,7 @@
     // sidebar (filters + list) is hidden on non-contacts views: skip building it, rebuild on return
     if (view === "contacts"){ renderFilters(); renderList(); sidebarStale = false; } else sidebarStale = true;
     $("#app").classList.toggle("dupview", view !== "contacts");
-    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else if (view === "review") renderReview(); else renderDups();
+    if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else if (view === "review") renderReview(); else if (view === "country-fix") renderCountryFix(); else renderDups();
     $("#categoryList").innerHTML = [...new Set([...CATEGORIES.map(c => c[0]), ...contacts.map(c => c.category).filter(Boolean)])].map(n => `<option value="${esc(n)}">`).join("");
     if (namesMemo !== sortedMemo.out || namesVer !== dataVer || sortedMemo.ref !== contacts){
       const s = sorted(contacts); namesMemo = sortedMemo.out; namesVer = dataVer;
@@ -3481,10 +3625,20 @@ address = one line. Do not invent anything that is not visible on the card. If t
       if (!v) go(); else dupSearchT = setTimeout(go, 120);
     }
   });
+  $("#main").addEventListener("input", e => {
+    if (e.target.id === "ccSearch"){
+      const v = e.target.value; clearTimeout(ccSearchT);
+      const go = () => { const el = $("#ccSearch"); if (!el || view !== "country-fix") return; ccQuery = el.value; renderCountryFix(); };
+      if (!v) go(); else ccSearchT = setTimeout(go, 120);
+    }
+  });
   $("#main").addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.classList && e.target.classList.contains("cc-in")){ e.preventDefault(); ccRow(e.target.closest(".ccrow"), false); return; }
+    if (e.key === "Enter" && e.target.id === "ccSearch"){ clearTimeout(ccSearchT); ccQuery = e.target.value; renderCountryFix(); return; }
     if (e.key === "Enter" && e.target.id === "dupSearch"){ clearTimeout(dupSearchT); dupQuery = e.target.value; renderDups(); }
   });
   $("#main").addEventListener("click", async e => {
+    const cc = e.target.closest("[data-cc]"); if (cc){ handleCC(cc); return; }
     const d = e.target.closest("[data-dact]"); if (d){ handleDup(d); return; }
     const ed = e.target.closest("[data-edit]");
     if (ed && !inlineEdit && !e.target.closest("a")){ startInlineEdit(ed.dataset.edit); return; }
