@@ -513,6 +513,21 @@
   .ccflag{display:inline-block;margin-right:6px;font-size:15px;line-height:1;vertical-align:-1px}
   .item .sub .ccflag{font-size:12px;margin-right:3px}
   .ccname{color:var(--muted);font-size:12.5px;margin-left:6px}
+  .phl1{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px;min-width:0}
+  .phl1+.phl1{margin-top:5px}
+  .phl1 a{overflow-wrap:anywhere}
+  .phtag{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2,var(--bg));color:var(--muted);font-size:11.5px;font-weight:600;line-height:1.5}
+  .phtag.old{border-style:dashed;opacity:.85}
+  .item .sub.phmore{margin-top:1px}
+  .item .sub.phmore i{font-style:normal;font-weight:600;opacity:.85}
+  .phlist{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .phlist:empty{display:none}
+  .phrow{display:flex;gap:6px;align-items:stretch;min-width:0}
+  .phrow .phnum{flex:1;min-width:0}
+  .phrow .ph-label{width:96px!important;flex:none;padding:8px 6px!important}
+  .phrow .ph-rm{flex:none;width:38px;padding:0;justify-content:center}
+  .phedit .ph-add{margin-top:6px}
+  @media (max-width:520px){ .phrow{flex-wrap:wrap} .phrow .phnum{flex:1 1 100%} .phrow .ph-label{flex:1!important;width:auto!important} }
   .chip.ccfilter{position:relative;display:inline-flex;align-items:center;padding-right:24px}
   .chip.ccfilter::after{content:"";position:absolute;right:9px;top:50%;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg)}
   .chip.ccfilter select{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:16px}
@@ -665,8 +680,8 @@
       <div class="grid2">
         <div class="field"><label for="f_firstName">First name</label><input id="f_firstName" name="firstName"></div>
         <div class="field"><label for="f_lastName">Last name</label><input id="f_lastName" name="lastName"></div>
-        <div class="field"><label for="f_phone">Phone</label><input id="f_phone" name="phone" type="tel"></div>
-        <div class="field"><label for="f_email">Email</label><input id="f_email" name="email" type="email"></div>
+        <div class="field full"><label for="f_phone">Phone</label><input id="f_phone" name="phone" type="tel"><div class="phedit" id="phEdit"></div></div>
+        <div class="field full"><label for="f_email">Email</label><input id="f_email" name="email" type="email"></div>
         <div class="field"><label for="f_company">Company</label><input id="f_company" name="company"></div>
         <div class="field"><label for="f_jobTitle">Job title</label><input id="f_jobTitle" name="jobTitle"></div>
         <div class="field full"><label for="f_address">Address</label><input id="f_address" name="address"></div>
@@ -800,7 +815,7 @@
 <script>
 (() => {
   // ---------- state ----------
-  const FIELDS = ["firstName","lastName","phone","email","company","jobTitle","address","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
+  const FIELDS = ["firstName","lastName","phone","phones","email","company","jobTitle","address","birthday","anniversary","website","howMet","introducedBy","keepInTouch","category","priority","nextFollowUp","followUpNote","tags","notes","favorite"];
   const ITYPES = { call:{label:"Call",icon:"📞"}, email:{label:"Email",icon:"✉️"}, meeting:{label:"Meeting",icon:"🤝"}, message:{label:"Message",icon:"💬"}, other:{label:"Note",icon:"📝"} };
   const KIT = [["","Off"],["7","Every week"],["14","Every 2 weeks"],["30","Every month"],["45","Every 6 weeks"],["60","Every 2 months"],["90","Every 3 months"],["120","Every 4 months"],["180","Every 6 months"],["365","Every year"]];
   const CATEGORIES = [["Work","#2747d0"],["Students","#0e7f8f"],["Faculty","#7a4fd0"],["Vendors","#b45309"],["Friends & Family","#db2777"],["Alumni","#1c7a4b"],["Potential Employers","#c2410c"],["Important Services","#475569"]];
@@ -826,6 +841,25 @@
   const LS_KEY = "contact-manager.v1";
 
   const $ = (s, r=document) => r.querySelector(s);
+  // ---- phone numbers: `phone` is the primary number, `phones` holds extra {number, label} entries ----
+  const PH_LABELS = ["Mobile","Home","Work","Other","Old"], PH_MAX = 20, PH_LABEL_MAX = 40;
+  const numKey = v => { const t = String(v || "").trim(), d = t.replace(/\D/g, ""); return d ? (d.length > 10 ? d.slice(-10) : d) : t.toLowerCase(); };
+  function normPhones(list, primary){
+    const out = [], seen = new Set(), p0 = String(primary || "").trim();
+    if (p0) seen.add(numKey(p0));
+    for (const p of Array.isArray(list) ? list : []){
+      const n = String(p && typeof p === "object" ? (p.number ?? "") : (p ?? "")).trim();
+      if (!n) continue;
+      const k = numKey(n); if (seen.has(k)) continue; seen.add(k);
+      out.push({ number: n, label: String(p && typeof p === "object" ? (p.label ?? "") : "").trim().slice(0, PH_LABEL_MAX) });
+      if (out.length >= PH_MAX) break;
+    }
+    return out;
+  }
+  // every number of a contact, primary first: [{number, label, primary}]
+  const phoneList = c => (c.phone ? [{ number: c.phone, label: "", primary: true }] : []).concat((c.phones || []).map(p => ({ number: p.number, label: p.label || "", primary: false })));
+  const telHref = n => "tel:" + String(n).replace(/[^\d+]/g, "");
+  const telType = l => ({ mobile: "CELL", home: "HOME", work: "WORK" })[String(l || "").trim().toLowerCase()] || "OTHER";
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
   const ICON_PATHS = {"search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>", "import": "<path d=\"M12 3v12\"/><path d=\"m7 10 5 5 5-5\"/><path d=\"M5 21h14\"/>", "export": "<path d=\"M12 21V9\"/><path d=\"m7 14 5-5 5 5\"/><path d=\"M5 3h14\"/>", "camera": "<path d=\"M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>", "card": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"9\" cy=\"11\" r=\"2\"/><path d=\"M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2M14 10h4M14 13h3\"/>", "edit": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>", "star": "<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z\"/>", "copy": "<rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"m19 6-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/>", "phone": "<path d=\"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z\"/>", "mail": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"m3 7 9 6 9-6\"/>", "building": "<rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"1\"/><path d=\"M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2\"/>", "briefcase": "<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18\"/>", "pin": "<path d=\"M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z\"/><circle cx=\"12\" cy=\"9\" r=\"2.5\"/>", "cake": "<path d=\"M4 21v-9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9\"/><path d=\"M4 16c1.5 1 3 1 4 0s3-1 4 0 3 1 4 0 2.5-1 4 0\"/><path d=\"M2 21h20M12 10V7\"/>", "heart": "<path d=\"M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z\"/>", "globe": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8\"/>", "spark": "<path d=\"M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7\"/><path d=\"M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7\"/>", "tag": "<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z\"/><circle cx=\"7.5\" cy=\"7.5\" r=\"1.5\"/>", "note": "<path d=\"M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z\"/><path d=\"M14 3v6h6M8 13h8M8 17h5\"/>", "message": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z\"/>", "calendar": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "bell": "<path d=\"M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.7 21a2 2 0 0 1-3.4 0\"/>", "refresh": "<path d=\"M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8\"/><path d=\"M21 3v5h-5M3 21v-5h5\"/>", "back": "<path d=\"m15 18-6-6 6-6\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "trend": "<path d=\"m22 17-8.5-8.5-5 5L2 7\"/><path d=\"M16 17h6v-6\"/>", "mobile": "<rect x=\"6\" y=\"2\" width=\"12\" height=\"20\" rx=\"2\"/><path d=\"M11 18h2\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5\"/>", "user": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/>", "book": "<path d=\"M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5Z\"/><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20M9 7h7M9 11h5\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "pen": "<path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>"};
@@ -867,8 +901,10 @@
     for (const f of FIELDS){
       if (f === "favorite") c.favorite = !!raw.favorite && raw.favorite !== "false";
       else if (f === "tags") c.tags = tagList(raw);
+      else if (f === "phones") continue;
       else c[f] = raw[f] == null ? "" : String(raw[f]).trim();
     }
+    c.phones = normPhones(raw.phones, c.phone);
     if (!/^\d{1,4}$/.test(c.keepInTouch)) c.keepInTouch = "";
     c.interactions = (Array.isArray(raw.interactions) ? raw.interactions : [])
       .filter(i => i && /^\d{4}-\d{2}-\d{2}/.test(String(i.date)))
@@ -896,16 +932,27 @@
   }
 
   // ---------- persistence ----------
-  function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(contacts.concat(trash))); } catch(e){} }
+  // dataVer bumps whenever contacts/trash change or are saved; derived-data caches key on it.
+  let dataVer = 0, saveDepth = 0, savePending = false;
+  function writeLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(contacts.concat(trash))); } catch(e){} }
+  function saveLocal(){ dataVer++; if (saveDepth){ savePending = true; return; } writeLocal(); }
+  // run fn with localStorage writes coalesced into one flush at the end (even if fn throws)
+  async function batchSaves(fn){
+    saveDepth++;
+    try { return await fn(); }
+    finally { if (!--saveDepth && savePending){ savePending = false; writeLocal(); } }
+  }
   function loadLocal(){ try { const v = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); return Array.isArray(v) ? v.map(normalize) : []; } catch(e){ return []; } }
 
   async function persist(c){
+    dataVer++;
     if (backend === "db"){
       try { await dbCol.doc(c.id).set(JSON.parse(JSON.stringify(c))); }
       catch(e){ handleDbError(e); }
     } else saveLocal();
   }
   async function removeStored(id){
+    dataVer++;
     if (backend === "db"){
       try { await dbCol.doc(id).delete(); } catch(e){ handleDbError(e); }
     } else saveLocal();
@@ -930,12 +977,12 @@
     purgeTrash();
     setStore("loading");
     render();
-    if (!window.claude || typeof window.claude.use !== "function"){ setStore(); return; }
+    if (!window.claude || typeof window.claude.use !== "function"){ setStore(); maybeMigrate(); return; }
     try {
       claude.use("downloads").then(d => { downloads = d; }).catch(()=>{});
       const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
       const id = user ? await user.id() : null;
-      if (!db || !id){ setStore(); return; }
+      if (!db || !id){ setStore(); maybeMigrate(); return; }
       dbCol = db.collection("data/users/" + id);
       backend = "db";
       const timer = setTimeout(() => setStore("stale"), 10000);
@@ -958,15 +1005,46 @@
         if (!snap.metadata.fromCache && !purgedRemote){ purgedRemote = true; purgeTrash(); }
         if (selectedId && !contacts.some(c=>c.id===selectedId)) selectedId = null;
         render();
-      }, err => { clearTimeout(timer); switchToLocal(); render(); });
-    } catch(e){ backend="local"; setStore(); }
+        if (!snap.metadata.fromCache) maybeMigrate();
+      }, err => { clearTimeout(timer); switchToLocal(); render(); maybeMigrate(); });
+    } catch(e){ backend="local"; setStore(); maybeMigrate(); }
   }
 
   // ---------- rendering ----------
-  function sorted(list){
-    return [...list].sort((a,b) => fullName(a).localeCompare(fullName(b), undefined, {sensitivity:"base"}));
+  // per-contact derived name data, computed once; an entry is stale when the contact object is replaced
+  const nameCache = new Map();   // id -> { o, name, tk, nk }
+  const COLL = new Intl.Collator(undefined, { sensitivity: "base" });   // sort order of the list
+  const COLL_DEF = new Intl.Collator();                                 // same as a.localeCompare(b)
+  function nameEntry(c){
+    if (!c.id) return { o: c, name: fullName(c) };
+    let e = nameCache.get(c.id);
+    if (!e || e.o !== c){ e = { o: c, name: fullName(c) }; nameCache.set(c.id, e); }
+    return e;
   }
+  const cachedName = c => nameEntry(c).name;
+  function sortedCompute(list){
+    const dec = list.map(c => ({ c, k: cachedName(c) }));
+    dec.sort((a, b) => COLL.compare(a.k, b.k));
+    return dec.map(d => d.c);
+  }
+  let sortedMemo = { ver: -1, ref: null, len: -1, out: null };
+  function sorted(list){
+    if (list !== contacts) return sortedCompute(list);
+    const m = sortedMemo;
+    if (m.ver !== dataVer || m.ref !== list || m.len !== list.length){
+      sortedMemo = { ver: dataVer, ref: list, len: list.length, out: sortedCompute(list) };
+    }
+    return sortedMemo.out.slice();
+  }
+  let visMemo = { key: "", ref: null, len: -1, out: null };
   function visible(){
+    const key = [dataVer, filter, catFilter, countryFilter, query].join("\u0001");
+    if (visMemo.key === key && visMemo.ref === contacts && visMemo.len === contacts.length) return visMemo.out.slice();
+    const out = visibleCompute();
+    visMemo = { key, ref: contacts, len: contacts.length, out };
+    return out.slice();
+  }
+  function visibleCompute(){
     const q = query.toLowerCase().trim();
     return sorted(contacts).filter(c => {
       if (filter === "archived" ? !c.archived : c.archived) return false;
@@ -976,9 +1054,9 @@
       if (countryFilter && (countryFilter === "none" ? phoneCountry(c) : phoneCountry(c) !== countryFilter)) return false;
       if (filter.startsWith("tag:") && !tagList(c).includes(filter.slice(4))) return false;
       if (!q) return true;
-      const hay = [fullName(c), c.phone, c.email, c.company, c.jobTitle, c.address, c.notes, ...tagList(c)].join(" ").toLowerCase();
+      const hay = [cachedName(c), c.phone, ...(c.phones || []).map(p => p.number + " " + p.label), c.email, c.company, c.jobTitle, c.address, c.notes, ...tagList(c)].join(" ").toLowerCase();
       const digits = q.replace(/\D/g,"");
-      return hay.includes(q) || (digits.length >= 3 && String(c.phone).replace(/\D/g,"").includes(digits));
+      return hay.includes(q) || (digits.length >= 3 && phoneList(c).some(p => p.number.replace(/\D/g,"").includes(digits)));
     });
   }
 
@@ -1014,15 +1092,16 @@
     const items = visible();
     let h = "", letter = "";
     for (const c of items){
-      const L = (fullName(c)[0] || "#").toUpperCase();
+      const L = (cachedName(c)[0] || "#").toUpperCase();
       const g = /[A-Z]/.test(L) ? L : "#";
       if (g !== letter){ letter = g; h += `<div class="group" data-letter="${g}">${g}</div>`; }
-      const sub = c.phone || c.email || c.company || "";
+      const sub = c.phone || c.email || c.company || ((c.phones || [])[0] || {}).number || "";
       const subFlag = c.phone ? phoneDisplay(c) + " " : "";
+      const more = (c.phones || []).filter(p => p.number !== sub);
       const on = picked.has(c.id);
       h += `<div class="item ${!selMode && c.id===selectedId?"sel":""} ${on?"picked":""}" data-id="${esc(c.id)}" ${selMode ? `role="checkbox" aria-checked="${on}" tabindex="0"` : ""}>
         ${selMode ? `<span class="cb ${on?"on":""}" aria-hidden="true">${ic("check")}</span>` : ""}${avatar(c)}
-        <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}${c.priority === "key" ? `<span class="keyflag" title="Key contact">${ic("flag")}</span>` : ""}${c.category ? `<span class="catdot" style="--c:${catColor(c.category)}" title="${esc(c.category)}"></span>` : ""}</div><div class="sub">${subFlag}${esc(sub)}</div></div></div>`;
+        <div class="meta"><div class="nm">${esc(cachedName(c))} ${c.favorite?'<span class="star">★</span>':""}${c.priority === "key" ? `<span class="keyflag" title="Key contact">${ic("flag")}</span>` : ""}${c.category ? `<span class="catdot" style="--c:${catColor(c.category)}" title="${esc(c.category)}"></span>` : ""}</div><div class="sub">${subFlag}${esc(sub)}</div>${more.length ? `<div class="sub phmore">${more.map(p => `${p.label ? `<i>${esc(p.label)}</i> ` : ""}${esc(p.number)}`).join(" · ")}</div>` : ""}</div></div>`;
     }
     if (!items.length) h = `<div class="empty" style="height:auto;padding:40px 20px">${contacts.length ? "No matches." : "No contacts yet."}</div>`;
     $("#list").innerHTML = h;
@@ -1065,7 +1144,7 @@
       <div class="actions">
         <button class="btn primary" data-act="edit">${ic("edit")}Edit</button>
         <button class="btn ${c.favorite ? "faved" : ""}" data-act="fav" aria-pressed="${c.favorite}">${ic("star")}${c.favorite ? "Favorite" : "Add to favorites"}</button>
-        ${c.phone ? `<a class="btn" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${ic("phone")}Call</a>` : ""}
+        ${phoneList(c)[0] ? `<a class="btn" href="${esc(telHref(phoneList(c)[0].number))}">${ic("phone")}Call</a>` : ""}
         ${c.email ? `<a class="btn" href="mailto:${esc(c.email)}">${ic("mail")}Email</a>` : ""}
         <button class="btn" data-act="share">${ic("share")}Share</button>
         <span class="spacer"></span>
@@ -1077,7 +1156,7 @@
       </div>
       <div class="card">
         ${row("Next follow-up", c.nextFollowUp ? `<b class="${c.nextFollowUp < today() ? "overdue" : ""}">${fmtShort(c.nextFollowUp)}</b> <span class="muted">· ${followWhen(c.nextFollowUp)}</span>${c.followUpNote ? `<div class="fnote">${esc(c.followUpNote)}</div>` : ""}` : (c.followUpNote ? esc(c.followUpNote) : ""), "nextFollowUp")}
-        ${row("Phone", c.phone ? `${phoneDisplay(c)}<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>${(() => { const p = phoneParts(c.phone); return p.iso ? ` <span class="ccname">${esc(CBY[p.iso].name)}${p.intl ? "" : " · assumed"}</span>` : ""; })()}` : "", "phone")}
+        ${row("Phone", phoneList(c).length ? phoneList(c).map(p => p.primary ? `<div class="phl1">${phoneDisplay(c)}<a href="${esc(telHref(p.number))}">${esc(p.number)}</a>${(() => { const q = phoneParts(p.number); return q.iso ? ` <span class="ccname">${esc(CBY[q.iso].name)}${q.intl ? "" : " · assumed"}</span>` : ""; })()}</div>` : `<div class="phl1 ext">${p.label ? `<span class="phtag${/^old$/i.test(p.label) ? " old" : ""}">${esc(p.label)}</span>` : ""}<a href="${esc(telHref(p.number))}">${esc(p.number)}</a></div>`).join("") : "", "phone")}
         ${row("Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "", "email")}
         ${row("Company", esc(c.company), "company")}
         ${row("Job title", esc(c.jobTitle), "jobTitle")}
@@ -1098,11 +1177,15 @@
   }
 
   // ---------- duplicates ----------
-  const phoneKey = c => { const d = String(c.phone||"").replace(/\D/g,""); if (d.length < 6) return ""; return d.length > 10 ? d.slice(-10) : d; };
-  const nameKey = c => [c.firstName, c.lastName].join(" ").normalize("NFD").replace(/[̀-ͯ]/g,"")
-      .toLowerCase().replace(/[^a-z0-9\s]/g," ").trim().split(/\s+/).filter(Boolean).sort().join(" ");
-  const nameTokens = c => [c.firstName, c.lastName].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-      .toLowerCase().replace(/[^a-z0-9\s]/g," ").trim().split(/\s+/).filter(Boolean);
+  const digKey = v => { const d = String(v||"").replace(/\D/g,""); if (d.length < 6) return ""; return d.length > 10 ? d.slice(-10) : d; };
+  const phoneKey = c => digKey(c.phone);
+  const phoneKeys = c => { const o = []; for (const p of phoneList(c)){ const k = digKey(p.number); if (k && !o.includes(k)) o.push(k); } return o; };
+  const nameTokens = c => {
+    const e = nameEntry(c);
+    return e.tk || (e.tk = [c.firstName, c.lastName].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase().replace(/[^a-z0-9\s]/g," ").trim().split(/\s+/).filter(Boolean));
+  };
+  const nameKey = c => { const e = nameEntry(c); return e.nk !== undefined ? e.nk : (e.nk = [...nameTokens(c)].sort().join(" ")); };
   // "J. Smith" ~ "John Smith": same last name, and first names equal or one is the other's initial
   function namesCompatible(a, b){
     const ta = nameTokens(a), tb = nameTokens(b);
@@ -1130,16 +1213,42 @@
     return [...groups.values()].filter(v => v.length > 1).map(v => {
       const items = [...v].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
       return { key: items.map(c => c.id).sort()[0], items, reason: items.some(c => viaEmail.has(c.id)) ? "Same email" : "Same name" };
-    }).sort((a,b) => b.items.length - a.items.length || fullName(a.items[0]).localeCompare(fullName(b.items[0])));
+    }).sort((a,b) => b.items.length - a.items.length || COLL_DEF.compare(cachedName(a.items[0]), cachedName(b.items[0])));
   }
+  const dupMemo = new Map();   // kind -> { ver, ref, len, out }
   function dupGroups(kind){
+    const m = dupMemo.get(kind);
+    if (m && m.ver === dataVer && m.ref === contacts && m.len === contacts.length) return m.out;
+    const out = dupGroupsCompute(kind);
+    dupMemo.set(kind, { ver: dataVer, ref: contacts, len: contacts.length, out });
+    return out;
+  }
+  function dupGroupsCompute(kind){
     if (kind === "dup-name") return nameGroups();
-    const fn = kind === "dup-phone" ? phoneKey : nameKey;
+    if (kind === "dup-phone") return phoneGroups();
+    const fn = nameKey;
     const m = new Map();
     for (const c of contacts){ const k = fn(c); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(c); }
     return [...m.entries()].filter(([,v]) => v.length > 1)
       .map(([key, items]) => ({ key, items: [...items].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt))) }))
-      .sort((a,b) => b.items.length - a.items.length || fullName(a.items[0]).localeCompare(fullName(b.items[0])));
+      .sort((a,b) => b.items.length - a.items.length || COLL_DEF.compare(cachedName(a.items[0]), cachedName(b.items[0])));
+  }
+  // a contact matches on any of its numbers; contacts linked through shared numbers form one group
+  function phoneGroups(){
+    const byKey = new Map(), parent = new Map();
+    const find = x => { while (parent.get(x) !== x){ parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+    for (const c of contacts){ parent.set(c.id, c.id); for (const k of phoneKeys(c)){ if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(c); } }
+    const keysOf = new Map();
+    for (const [k, v] of byKey){
+      if (v.length < 2) continue;
+      for (let i = 1; i < v.length; i++){ const a = find(v[0].id), b = find(v[i].id); if (a !== b) parent.set(b, a); }
+      for (const c of v){ const r = find(c.id); if (!keysOf.has(r)) keysOf.set(r, []); keysOf.get(r).push(k); }
+    }
+    const groups = new Map();
+    for (const c of contacts){ const r = find(c.id); if (!keysOf.has(r)) continue; if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c); }
+    return [...groups.entries()].filter(([, v]) => v.length > 1)
+      .map(([r, items]) => ({ key: [...new Set(keysOf.get(r))].sort()[0], items: [...items].sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt))) }))
+      .sort((a,b) => b.items.length - a.items.length || COLL_DEF.compare(cachedName(a.items[0]), cachedName(b.items[0])));
   }
   const keepChoice = new Map();   // "kind|key" -> id to keep when merging
   let dupQuery = "";
@@ -1161,7 +1270,7 @@
     const kind = view, isPhone = kind === "dup-phone";
     const all = dupGroups(kind);
     const q = dupQuery.toLowerCase().trim();
-    const groups = q ? all.filter(g => g.items.some(c => [fullName(c), c.phone, c.email].join(" ").toLowerCase().includes(q))) : all;
+    const groups = q ? all.filter(g => g.items.some(c => [fullName(c), ...phoneList(c).map(p => p.number), c.email].join(" ").toLowerCase().includes(q))) : all;
     const extra = all.reduce((s,g) => s + g.items.length - 1, 0);
     const title = isPhone ? "Duplicate numbers" : "Duplicate names";
     const sub = all.length
@@ -1181,7 +1290,7 @@
       const gk = kind + "|" + g.key;
       let keepId = keepChoice.get(gk);
       if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
-      const label = isPhone ? (g.items[0].phone) : fullName(g.items[0]);
+      const label = isPhone ? ((phoneList(g.items[0]).find(p => digKey(p.number) === g.key) || {}).number || g.items[0].phone) : fullName(g.items[0]);
       h += `<div class="dupgroup"><div class="gh">
         <span class="gi">${ic(isPhone ? "phone" : "user")}</span><span class="key">${esc(label)}</span>${g.reason === "Same email" ? `<span class="pill" title="Names look alike and the email address matches">${ic("mail")}Same email</span>` : ""}<span class="n">${g.items.length} contacts</span>
         <button class="btn sm primary" data-dact="merge" data-g="${esc(gk)}">Merge into one</button></div>`;
@@ -1189,7 +1298,7 @@
         h += `<div class="dupitem ${c.id===keepId?"kept":""}">
           ${avatar(c)}
           <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div>
-            <div class="sub">${esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No other details")} · added ${new Date(c.createdAt).toLocaleDateString()}</div></div>
+            <div class="sub">${esc([phoneList(c).map(p => p.number).join(", "), c.email, c.company].filter(Boolean).join(" · ") || "No other details")} · added ${new Date(c.createdAt).toLocaleDateString()}</div></div>
           <div class="acts">
             <label class="keep"><input type="radio" name="keep-${esc(gk)}" data-g="${esc(gk)}" value="${esc(c.id)}" ${c.id===keepId?"checked":""}> Keep</label>
             <button class="btn sm" data-dact="view" data-id="${esc(c.id)}">View</button>
@@ -1209,7 +1318,7 @@
     const extraNotes = [];
     for (const o of others){
       for (const f of FIELDS){
-        if (f === "tags" || f === "favorite" || f === "notes") continue;
+        if (f === "tags" || f === "favorite" || f === "notes" || f === "phones") continue;
         if (f === FIELDS[0]) for (const k of ["photo","icon","avatarColor"]) if (!m[k] && o[k]) m[k] = o[k];
         if (!m[f] && o[f]) m[f] = o[f];
       }
@@ -1217,7 +1326,7 @@
       m.tags = [...new Set([...m.tags, ...tagList(o)])];
       const seen = new Set((m.interactions||[]).map(i => i.extId || i.id));
       m.interactions = [...(m.interactions||[]), ...(o.interactions||[]).filter(i => !seen.has(i.extId || i.id))];
-      if (o.phone && phoneKey(o) !== phoneKey(m) && o.phone !== m.phone) extraNotes.push("Other phone: " + o.phone);
+      m.phones = normPhones((m.phones || []).concat(o.phone ? [{ number: o.phone, label: "Other" }] : [], o.phones || []), m.phone);
       if (o.email && o.email.toLowerCase() !== String(m.email).toLowerCase()) extraNotes.push("Other email: " + o.email);
       if (o.notes && !String(m.notes).includes(o.notes)) extraNotes.push(o.notes);
     }
@@ -1241,8 +1350,7 @@
     const binned = gone.map(c => normalize({ ...c, deletedAt: now, mergedInto: undefined }));
     trash = trash.concat(binned);
     render();
-    for (const m of merged) await persist(m);
-    for (const c of binned) await persist(c);
+    await batchSaves(async () => { for (const m of merged) await persist(m); for (const c of binned) await persist(c); });
     toast(`Merged ${removed.length + merged.length} contacts into ${merged.length}`);
   }
 
@@ -1295,12 +1403,17 @@
     leaveInline(() => { setView(v); dupQuery = ""; render(); $("#main").scrollTop = 0; });
   });
 
+  let sidebarStale = false, namesMemo = null, namesVer = -1;
   function render(){
-    renderFilters(); renderList();
+    // sidebar (filters + list) is hidden on non-contacts views: skip building it, rebuild on return
+    if (view === "contacts"){ renderFilters(); renderList(); sidebarStale = false; } else sidebarStale = true;
     $("#app").classList.toggle("dupview", view !== "contacts");
     if (view === "contacts") renderMain(); else if (view === "reminders") renderReminders(); else if (view === "scan") renderScan(); else if (view === "trash") renderTrash(); else if (view === "review") renderReview(); else renderDups();
     $("#categoryList").innerHTML = [...new Set([...CATEGORIES.map(c => c[0]), ...contacts.map(c => c.category).filter(Boolean)])].map(n => `<option value="${esc(n)}">`).join("");
-    $("#contactNames").innerHTML = sorted(contacts).map(c => `<option value="${esc(fullName(c))}">`).join("");
+    if (namesMemo !== sortedMemo.out || namesVer !== dataVer || sortedMemo.ref !== contacts){
+      const s = sorted(contacts); namesMemo = sortedMemo.out; namesVer = dataVer;
+      $("#contactNames").innerHTML = s.map(c => `<option value="${esc(cachedName(c))}">`).join("");
+    }
     renderBadges();
   }
 
@@ -1318,6 +1431,23 @@
     else if (inlineEdit){ e.preventDefault(); leaveInline(renderMain); }
   });
 
+  // ----- extra phone numbers in the edit forms -----
+  const phLabelOpts = cur => { cur = cur || "Other"; return (PH_LABELS.includes(cur) ? PH_LABELS : PH_LABELS.concat(cur)).map(l => `<option ${l === cur ? "selected" : ""}>${esc(l)}</option>`).join(""); };
+  const phRowHTML = p => `<div class="phrow"><div class="phnum"><input type="tel" class="ph-num" aria-label="Phone number" value="${esc(p.number)}"></div><select class="ph-label" aria-label="Label">${phLabelOpts(p.label)}</select><button type="button" class="btn icon ph-rm" aria-label="Remove number" title="Remove number">✕</button></div>`;
+  const phEditorHTML = list => `<div class="phlist">${(list || []).map(phRowHTML).join("")}</div><button type="button" class="btn sm ghost ph-add">＋ Add number</button>`;
+  const phEnhance = root => root.querySelectorAll(".ph-num").forEach(enhancePhone);
+  const readPhones = root => root ? [...root.querySelectorAll(".phrow")].map(r => ({ number: readPhone(r.querySelector(".ph-num")).trim(), label: r.querySelector(".ph-label").value })).filter(p => p.number) : undefined;
+  document.addEventListener("click", e => {
+    const add = e.target.closest(".ph-add"), rm = e.target.closest(".ph-rm");
+    if (add){
+      const list = add.closest(".phedit").querySelector(".phlist");
+      if (list.children.length >= PH_MAX - 1) return;
+      list.insertAdjacentHTML("beforeend", phRowHTML({ number: "", label: "Mobile" }));
+      const inp = list.lastElementChild.querySelector(".ph-num"); enhancePhone(inp); inp.focus();
+      if (inlineEdit && $("#inlineErr")) $("#inlineErr").textContent = "";
+    } else if (rm){ rm.closest(".phrow").remove(); }
+  });
+
   // ----- edit -----
   function openEdit(c, prefill, title){
     editingId = c ? c.id : null;
@@ -1325,6 +1455,7 @@
     $("#editTitle").textContent = title || (c ? "Edit contact" : "New contact");
     $("#editErr").textContent = "";
     for (const f of FIELDS){
+      if (f === "phones") continue;
       const el = $("#f_"+f);
       if (f === "favorite") el.checked = !!src?.favorite;
       else if (f === "tags") el.value = src ? tagList(src).join(", ") : "";
@@ -1332,6 +1463,7 @@
     }
     openModal("#editScrim");
     enhancePhone($("#f_phone"));
+    $("#phEdit").innerHTML = phEditorHTML(src?.phones); phEnhance($("#phEdit"));
     if (prefill && prefill.phone && !c) $("#f_phone").closest(".phonefield").dataset.touched = "1";
     setTimeout(()=>$("#f_firstName").focus(), 30);
   }
@@ -1353,7 +1485,7 @@
       contacts = contacts.map(x => x.id===id ? c : x);
     } else {
       c = normalize({ ...raw, createdAt: now, updatedAt: now });
-      contacts.push(c);
+      contacts.push(c); dataVer++;
     }
     selectedId = c.id;
     setView("contacts");
@@ -1365,8 +1497,9 @@
   $("#editForm").addEventListener("submit", async e => {
     e.preventDefault();
     const raw = {};
-    for (const f of FIELDS){ const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
+    for (const f of FIELDS){ if (f === "phones") continue; const el=$("#f_"+f); raw[f] = f==="favorite" ? el.checked : el.value; }
     raw.phone = readPhone($("#f_phone"));
+    raw.phones = readPhones($("#phEdit"));
     const err = validateRaw(raw);
     if (err){ $("#editErr").textContent = err; return; }
     closeModal($("#editScrim"));
@@ -1394,13 +1527,16 @@
       raw[k] = k === "favorite" ? el.checked : el.value;
     }
     if (f.elements.phone) raw.phone = readPhone(f.elements.phone);
+    const pe = f.querySelector(".phedit"); if (pe) raw.phones = readPhones(pe);
     return raw;
   }
   function inlineDirty(){
     if (!inlineEdit) return false;
     const c = contacts.find(x => x.id === selectedId), raw = collectInline();
     if (!c || !raw) return false;
+    const pkey = l => (l || []).map(p => String(p.number).trim() + "|" + (p.label || "Other")).join(";");
     return FIELDS.some(k => k === "favorite" ? !!raw[k] !== !!c[k]
+      : k === "phones" ? raw.phones !== undefined && pkey(raw.phones) !== pkey(c.phones)
       : k === "tags" ? tagList(raw).join(",") !== tagList(c).join(",")
       : String(raw[k] ?? "").trim() !== String(c[k] ?? ""));
   }
@@ -1442,10 +1578,10 @@
       </div>
       <div class="err" id="inlineErr" role="alert"></div>
       <div class="card editing">
-        ${EDIT_ROWS.map(([k,label,type]) => `<div class="row"><label class="k" for="i_${k}">${label}</label><div class="v">${inp(k,label,type, k==="tags" ? tagList(c).join(", ") : c[k])}</div></div>`).join("")}
+        ${EDIT_ROWS.map(([k,label,type]) => `<div class="row"><label class="k" for="i_${k}">${label}</label><div class="v">${inp(k,label,type, k==="tags" ? tagList(c).join(", ") : c[k])}${k === "phone" ? `<div class="phedit">${phEditorHTML(c.phones)}</div>` : ""}</div></div>`).join("")}
       </div>
     </form>`;
-    enhancePhone($("#i_phone"));
+    enhancePhone($("#i_phone")); phEnhance($("#inlineForm"));
     const el = $("#i_" + (inlineFocus || "firstName")) || $("#i_firstName");
     inlineFocus = null;
     if (el){ el.focus(); if (el.setSelectionRange && /^(text|tel|search|textarea)$/.test(el.type)) { try { el.setSelectionRange(el.value.length, el.value.length); } catch(e){} } }
@@ -1473,10 +1609,11 @@
 
   // ---------- formats: export ----------
   const CSV_COLS = [["firstName","First Name"],["lastName","Last Name"],["phone","Phone"],["email","Email"],["company","Company"],["jobTitle","Job Title"],["address","Address"],["birthday","Birthday"],["anniversary","Anniversary"],["website","Website"],["howMet","How We Met"],["introducedBy","Introduced By"],["keepInTouch","Keep In Touch (days)"],["category","Category"],["priority","Priority"],["nextFollowUp","Next Follow-up"],["followUpNote","Follow-up Note"],["tags","Tags"],["notes","Notes"],["favorite","Favorite"],["_last","Last Contacted"],["_strength","Relationship Strength"]];
+  const phoneCell = c => phoneList(c).map(p => p.number).join("; ");   // primary first; extras follow, "; " separated
   const csvCell = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   function toCSV(items){
     const lines = [CSV_COLS.map(c=>c[1]).join(",")];
-    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="favorite" ? (c.favorite?"yes":"") : k==="_last" ? lastContacted(c) : k==="_strength" ? strength(c) : c[k])).join(","));
+    for (const c of items) lines.push(CSV_COLS.map(([k]) => csvCell(k==="tags" ? tagList(c).join("; ") : k==="phone" ? phoneCell(c) : k==="favorite" ? (c.favorite?"yes":"") : k==="_last" ? lastContacted(c) : k==="_strength" ? strength(c) : c[k])).join(","));
     return lines.join("\r\n");
   }
   function toJSON(items){
@@ -1490,7 +1627,7 @@
         `N:${vEsc(c.lastName)};${vEsc(c.firstName)};;;`, `FN:${vEsc(fullName(c))}`];
       if (c.company) L.push(`ORG:${vEsc(c.company)}`);
       if (c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
-      if (c.phone) L.push(`TEL;TYPE=CELL:${vEsc(c.phone)}`);
+      for (const p of phoneList(c)) L.push(`TEL;TYPE=${p.primary ? "CELL" : telType(p.label)}:${vEsc(p.number)}`);
       if (c.email) L.push(`EMAIL;TYPE=INTERNET:${vEsc(c.email)}`);
       if (c.address) L.push(`ADR;TYPE=HOME:;;${vEsc(c.address)};;;;`);
       if (c.birthday) L.push(`BDAY:${c.birthday}`);
@@ -1606,6 +1743,15 @@
       const o = {};
       r.forEach((v, i) => {
         const k = map[i]; v = (v||"").trim(); if (!k || !v) return;
+        if (k === "phone"){
+          const h = String(rows[0][i] || "");
+          const lab = /home/i.test(h) ? "Home" : /work|business|office/i.test(h) ? "Work" : /mobile|cell/i.test(h) ? "Mobile" : /old/i.test(h) ? "Old" : "Other";
+          for (const part of v.split(/\s*;\s*/)){
+            if (!/\d/.test(part)) continue;
+            if (!o.phone) o.phone = part; else (o.phones || (o.phones = [])).push({ number: part, label: lab });
+          }
+          return;
+        }
         if (k === "tags"){ o.tags = (o.tags ? o.tags+"," : "") + v.replace(/\s*:::\s*/g,",").replace(/;/g,",").replace(/\* ?myContacts/gi,""); }
         else if (k === "favorite") o.favorite = /^(1|y|yes|true|x|★)$/i.test(v);
         else if (k === "address") o.address = o.address ? o.address + ", " + v : v;
@@ -1630,7 +1776,12 @@
         switch (key){
           case "N": { const p = val.split(";").map(vUnesc); o.lastName = p[0]||""; o.firstName = [p[1],p[2]].filter(Boolean).join(" "); break; }
           case "FN": fn = vUnesc(val); break;
-          case "TEL": if (!o.phone) o.phone = vUnesc(val.replace(/^tel:/i,"")); break;
+          case "TEL": {
+            const num = vUnesc(val.replace(/^tel:/i,"")).trim(); if (!num) break;
+            if (!o.phone) o.phone = num;
+            else (o.phones || (o.phones = [])).push({ number: num, label: /CELL|MOBILE/i.test(m[2]) ? "Mobile" : /HOME/i.test(m[2]) ? "Home" : /WORK/i.test(m[2]) ? "Work" : "Other" });
+            break;
+          }
           case "EMAIL": if (!o.email) o.email = vUnesc(val); break;
           case "ORG": o.company = vUnesc(val.split(";").filter(Boolean).join(", ")); break;
           case "TITLE": o.jobTitle = vUnesc(val); break;
@@ -1688,7 +1839,7 @@
     const dupes = list.filter(c=>c._dupe).length;
     $("#importPreview").innerHTML = `<p class="note"><b>${list.length}</b> contact${list.length===1?"":"s"} found${dupes?` · ${dupes} already in your list`:""}${name?` in ${esc(name)}`:""}.</p>
       <div class="preview"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Company</th></tr></thead><tbody>
-      ${list.slice(0,200).map(c=>`<tr style="${c._dupe?"opacity:.5":""}"><td>${esc(fullName(c))}${c._dupe?" (duplicate)":""}</td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td><td>${esc(c.company)}</td></tr>`).join("")}
+      ${list.slice(0,200).map(c=>`<tr style="${c._dupe?"opacity:.5":""}"><td>${esc(fullName(c))}${c._dupe?" (duplicate)":""}</td><td>${esc(c.phone)}${c.phones.length ? ` <span class="muted">+${c.phones.length}</span>` : ""}</td><td>${esc(c.email)}</td><td>${esc(c.company)}</td></tr>`).join("")}
       </tbody></table></div>`;
     updateImportBtn();
   }
@@ -1847,7 +1998,15 @@
   }
 
   // ---------- reminders ----------
+  let remMemo = { key: "", ref: null, len: -1, out: null };
   function reminderData(){
+    const key = dataVer + "|" + today();
+    if (remMemo.key === key && remMemo.ref === contacts && remMemo.len === contacts.length) return remMemo.out;
+    const out = reminderCompute();
+    remMemo = { key, ref: contacts, len: contacts.length, out };
+    return out;
+  }
+  function reminderCompute(){
     const events = [], due = [], follow = [];
     for (const c of contacts){
       if (c.archived) continue;
@@ -1857,8 +2016,8 @@
       }
       const f = followUp(c); if (f && f.due) due.push({ c, ...f });
     }
-    events.sort((a,b) => a.inDays - b.inDays || fullName(a.c).localeCompare(fullName(b.c)));
-    due.sort((a,b) => (b.since ?? 1e9) - b.every - ((a.since ?? 1e9) - a.every) || fullName(a.c).localeCompare(fullName(b.c)));
+    events.sort((a,b) => a.inDays - b.inDays || COLL_DEF.compare(cachedName(a.c), cachedName(b.c)));
+    due.sort((a,b) => (b.since ?? 1e9) - b.every - ((a.since ?? 1e9) - a.every) || COLL_DEF.compare(cachedName(a.c), cachedName(b.c)));
     follow.sort((a,b) => a.nextFollowUp.localeCompare(b.nextFollowUp));
     return { events, due, follow };
   }
@@ -2072,7 +2231,8 @@
     const prompt = `The image is a photo of a business card. Read it and extract the contact details printed on it.
 Reply with only a JSON object with exactly these string keys (use "" when a value is not on the card):
 {"firstName":"","lastName":"","phone":"","email":"","company":"","jobTitle":"","address":"","website":"","notes":""}
-Rules: phone = the main mobile or direct number as printed; put any other numbers (office, fax), social handles and taglines in "notes", one per line.
+plus "otherPhones", an array of strings (empty when there are none).
+Rules: phone = the main mobile or direct number as printed; list every other number (office, fax) in "otherPhones" as printed, never in "notes"; put social handles and taglines in "notes", one per line.
 address = one line. Do not invent anything that is not visible on the card. If the image is not a business card, return all empty strings.`;
     try {
       const r = await sampleFn.json(prompt, { images: [file], signal: scanCtl.signal });
@@ -2080,6 +2240,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
       const pre = {}; for (const k of ["firstName","lastName","phone","email","company","jobTitle","address","website","notes"]) pre[k] = typeof o[k] === "string" ? o[k].trim() : "";
       if (!Object.values(pre).some(Boolean)){ $("#scanStatus").textContent = "Couldn't find contact details on that photo. Try a sharper, well-lit picture of the card."; $("#scanStatus").style.color = "var(--danger)"; $("#scanRetry").hidden = false; $("#scanStop").hidden = true; return; }
       pre.howMet = ""; pre.tags = "";
+      pre.phones = (Array.isArray(o.otherPhones) ? o.otherPhones : []).filter(n => typeof n === "string" && n.trim()).map(n => ({ number: n.trim(), label: "Other" }));
       closeModal($("#scanScrim"));
       setView("contacts"); render();
       openEdit(null, pre, "Check the scanned contact");
@@ -2116,9 +2277,9 @@ address = one line. Do not invent anything that is not visible on the card. If t
   const pickerSupported = () => "contacts" in navigator && "ContactsManager" in window && typeof navigator.contacts.select === "function";
   const existingKeys = () => {
     const emails = new Set(contacts.map(c => String(c.email||"").trim().toLowerCase()).filter(Boolean));
-    const phones = new Set(contacts.map(phoneKey).filter(Boolean));
+    const phones = new Set(contacts.flatMap(phoneKeys));
     const names = new Set(contacts.map(nameKey).filter(Boolean));
-    return c => (c.email && emails.has(c.email.trim().toLowerCase())) || (phoneKey(c) && phones.has(phoneKey(c))) || (!c.email && !phoneKey(c) && nameKey(c) && names.has(nameKey(c)));
+    return c => (c.email && emails.has(c.email.trim().toLowerCase())) || phoneKeys(c).some(k => phones.has(k)) || (!c.email && !phoneKey(c) && nameKey(c) && names.has(nameKey(c)));
   };
   function setDeviceResults(list, src){
     const exists = existingKeys();
@@ -2135,7 +2296,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     return items.map((x, i) => {
       const c = x.c, sub = kind === "mail"
         ? `${esc(c.email)} · ${x.count} conversation${x.count===1?"":"s"} · last ${agoText(x.last)}`
-        : esc([c.phone, c.email, c.company].filter(Boolean).join(" · ") || "No phone or email");
+        : esc([c.phone ? c.phone + (c.phones.length ? ` (+${c.phones.length})` : "") : "", c.email, c.company].filter(Boolean).join(" · ") || "No phone or email");
       return `<label class="pick ${x.exists ? "dim" : ""}">
         <input type="checkbox" data-pick="${kind}" value="${i}" ${sel.has(i) ? "checked" : ""} ${x.exists ? "disabled" : ""}>
         ${avatar(c)}
@@ -2326,7 +2487,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
         setDeviceResults(res.map(r => {
           const ad = (r.address || [])[0];
           const address = ad ? [...(ad.addressLine || []), ad.city, ad.region, ad.postalCode, ad.country].filter(Boolean).join(", ") : "";
-          return { ...splitName((r.name || [])[0] || ""), email: (r.email || [])[0] || "", phone: (r.tel || [])[0] || "", address };
+          return { ...splitName((r.name || [])[0] || ""), email: (r.email || [])[0] || "", phone: (r.tel || [])[0] || "", phones: (r.tel || []).slice(1).map(n => ({ number: n, label: "Other" })), address };
         }), "your device");
       } catch(err){ toast("Couldn't open your contacts here — use an address-book file instead."); }
     }
@@ -2520,7 +2681,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
         <button class="btn sm danger" data-bulk="delete" ${n ? "" : "disabled"}>${ic("trash")}Delete</button>
       </div>`;
   }
-  async function saveMany(list){ for (const c of list) await persist(c); }
+  async function saveMany(list){ await batchSaves(async () => { for (const c of list) await persist(c); }); }
   function updatePicked(fn){
     const now = new Date().toISOString(), changed = [];
     contacts = contacts.map(c => { if (!picked.has(c.id)) return c; const r = { ...fn({ ...c }), updatedAt: now }; if (r.archived === false) delete r.archived; const n = normalize(r); changed.push(n); return n; });
@@ -2648,6 +2809,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
 
   // ---------- recently deleted (kept 30 days) ----------
   function splitAll(all){
+    dataVer++; nameCache.clear();
     contacts = all.filter(c => !c.deletedAt);
     trash = all.filter(c => c.deletedAt).sort((a,b) => String(b.deletedAt).localeCompare(String(a.deletedAt)));
     if (selectedId && !contacts.some(c => c.id === selectedId)) selectedId = null;
@@ -2950,7 +3112,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
         important.map(c => `<span class="mini">${avatar(c)}<a href="#" data-goto="${esc(c.id)}">${esc(fullName(c))}</a><span class="muted">${lastContacted(c) ? agoText(lastContacted(c)) : "never"}</span><button class="btn sm" data-ract="log" data-type="call" data-id="${esc(c.id)}">${ic("phone")}Called</button><button class="btn sm" data-ract="log" data-type="message" data-id="${esc(c.id)}">${ic("message")}Messaged</button></span>`).join("")]
     ];
     const done = steps.filter(x => st[x[0]]).length;
-    const inact = live.filter(inactive), check = live.filter(needsCheck), bare = live.filter(c => !c.phone && !c.email);
+    const inact = live.filter(inactive), check = live.filter(needsCheck), bare = live.filter(c => !phoneList(c).length && !c.email);
     let h = `<div class="dupwrap"><div class="duphead"><div style="flex:1"><h2>Weekly review</h2>
       <p>Ten minutes a week keeps your address book useful. Week ${isoWeek().split("-W")[1]} · ${done} of ${steps.length} done.</p></div></div>
       <div class="progress"><span style="width:${done / steps.length * 100}%"></span></div>
@@ -2986,14 +3148,14 @@ address = one line. Do not invent anything that is not visible on the card. If t
       askConfirm(`Archive ${list.length} contacts?`, `They'll be hidden from your list and reminders, but kept. You can find them under the <b>Archived</b> filter and unarchive them any time.`, "Archive", async () => {
         const now = new Date().toISOString(), ids = new Set(list.map(c => c.id)), changed = [];
         contacts = contacts.map(c => { if (!ids.has(c.id)) return c; const n = normalize({ ...c, archived: true, updatedAt: now }); changed.push(n); return n; });
-        render(); for (const c of changed) await persist(c); toast(`Archived ${changed.length} contacts`);
+        render(); await batchSaves(async () => { for (const c of changed) await persist(c); }); toast(`Archived ${changed.length} contacts`);
       });
     }
   });
 
   // ---------- Outlook CSV ----------
   const OUTLOOK_COLS = [["First Name", c => c.firstName], ["Last Name", c => c.lastName], ["Company", c => c.company], ["Job Title", c => c.jobTitle],
-    ["E-mail Address", c => c.email], ["Mobile Phone", c => c.phone], ["Home Street", c => c.address], ["Birthday", c => c.birthday], ["Anniversary", c => c.anniversary],
+    ["E-mail Address", c => c.email], ["Mobile Phone", c => phoneCell(c)], ["Home Street", c => c.address], ["Birthday", c => c.birthday], ["Anniversary", c => c.anniversary],
     ["Web Page", c => c.website], ["Referred By", c => c.introducedBy], ["Categories", c => [c.category, ...tagList(c)].filter(Boolean).join(";")],
     ["Notes", c => [c.notes, c.howMet ? "How we met: " + c.howMet : "", c.nextFollowUp ? `Next follow-up: ${c.nextFollowUp}${c.followUpNote ? " — " + c.followUpNote : ""}` : ""].filter(Boolean).join("\n")]];
   function toOutlook(items){ return [OUTLOOK_COLS.map(c => c[0]).join(","), ...items.map(c => OUTLOOK_COLS.map(([, f]) => csvCell(f(c) || "")).join(","))].join("\r\n"); }
@@ -3004,7 +3166,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
   function shareText(list){
     return list.map(c => {
       const L = [fullName(c)];
-      if (shareOn.phone && c.phone) L.push("Phone: " + c.phone);
+      if (shareOn.phone) for (const p of phoneList(c)) L.push((p.label ? `Phone (${p.label}): ` : "Phone: ") + p.number);
       if (shareOn.email && c.email) L.push("Email: " + c.email);
       if (shareOn.work && (c.jobTitle || c.company)) L.push([c.jobTitle, c.company].filter(Boolean).join(", "));
       if (shareOn.address && c.address) L.push("Address: " + c.address);
@@ -3017,7 +3179,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
   function shareVCard(list){
     return list.map(c => {
       const L = ["BEGIN:VCARD","VERSION:3.0",`N:${vEsc(c.lastName)};${vEsc(c.firstName)};;;`,`FN:${vEsc(fullName(c))}`];
-      if (shareOn.phone && c.phone) L.push(`TEL;TYPE=CELL:${vEsc(c.phone)}`);
+      if (shareOn.phone) for (const p of phoneList(c)) L.push(`TEL;TYPE=${p.primary ? "CELL" : telType(p.label)}:${vEsc(p.number)}`);
       if (shareOn.email && c.email) L.push(`EMAIL:${vEsc(c.email)}`);
       if (shareOn.work && c.company) L.push(`ORG:${vEsc(c.company)}`);
       if (shareOn.work && c.jobTitle) L.push(`TITLE:${vEsc(c.jobTitle)}`);
@@ -3052,7 +3214,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
     const enc = encodeURIComponent, subj = one ? `Contact: ${fullName(c)}` : `${list.length} contacts`;
     const canFiles = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File(["x"], "c.vcf", { type: "text/vcard" })] })); } catch(e){ return false; } })();
     const qr = one ? qrSVG(vcf) : "";
-    const available = SHARE_FIELDS.filter(([k]) => list.some(x => k === "work" ? (x.jobTitle || x.company) : x[k]));
+    const available = SHARE_FIELDS.filter(([k]) => list.some(x => k === "work" ? (x.jobTitle || x.company) : k === "phone" ? phoneList(x).length : x[k]));
     $("#shareBody").innerHTML = `
       <div class="sharetop">
         ${one ? `<div class="qrbox">${qr ? `<div class="qr" role="img" aria-label="QR code for ${esc(fullName(c))}">${qr}</div><p class="note">Scan with the other phone's camera to save the contact — works offline, no app or pairing.</p>` : `<p class="note">QR code unavailable here.</p>`}</div>` : ""}
@@ -3113,7 +3275,11 @@ address = one line. Do not invent anything that is not visible on the card. If t
     const items = (query || filter !== "all") ? vis : sorted(contacts);
     openExport(items, "contacts", false);
   });
-  $("#search").addEventListener("input", e => { query = e.target.value; renderList(); });
+  let searchT;
+  const applySearch = () => { clearTimeout(searchT); query = $("#search").value; renderList(); };
+  $("#search").addEventListener("input", e => { clearTimeout(searchT); if (!e.target.value) applySearch(); else searchT = setTimeout(applySearch, 120); });
+  $("#search").addEventListener("keydown", e => { if (e.key === "Enter") applySearch(); });
+  $("#search").addEventListener("search", applySearch);
   $("#filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b){ filter = b.dataset.f; renderFilters(); renderList(); } });
   $("#list").addEventListener("click", e => {
     const it = e.target.closest(".item"); if (!it) return;
@@ -3131,8 +3297,16 @@ address = one line. Do not invent anything that is not visible on the card. If t
     const r = e.target.closest('input[type="radio"][data-g]');
     if (r){ keepChoice.set(r.dataset.g, r.value); renderDups(); }
   });
+  let dupSearchT;
   $("#main").addEventListener("input", e => {
-    if (e.target.id === "dupSearch"){ dupQuery = e.target.value; renderDups(); }
+    if (e.target.id === "dupSearch"){
+      const v = e.target.value; clearTimeout(dupSearchT);
+      const go = () => { const el = $("#dupSearch"); if (!el || (view !== "dup-phone" && view !== "dup-name")) return; dupQuery = el.value; renderDups(); };
+      if (!v) go(); else dupSearchT = setTimeout(go, 120);
+    }
+  });
+  $("#main").addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.id === "dupSearch"){ clearTimeout(dupSearchT); dupQuery = e.target.value; renderDups(); }
   });
   $("#main").addEventListener("click", async e => {
     const d = e.target.closest("[data-dact]"); if (d){ handleDup(d); return; }
@@ -3148,11 +3322,11 @@ address = one line. Do not invent anything that is not visible on the card. If t
       case "cancelEdit": leaveInline(renderMain); break;
       case "delete": if (c) confirmDelete(c); break;
       case "export1": if (c) openExport([c], fullName(c), true); break;
-      case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); render(); await persist(c); } break;
+      case "fav": if (c){ c.favorite = !c.favorite; c.updatedAt = new Date().toISOString(); dataVer++; render(); await persist(c); } break;
       case "archive": if (c){ await patchContact(c.id, { archived: !c.archived }); toast(c.archived ? `${fullName(c)} is back in your list` : `${fullName(c)} archived — find it under the Archived filter`); } break;
       case "share": if (c) openShare([c]); break;
       case "verify": if (c){ await patchContact(c.id, { verifiedAt: today() }); toast("Marked as checked today"); } break;
-      case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", interactions: [], syncedAt: "", createdAt: now, updatedAt: now }); contacts.push(d); selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
+      case "dup": if (c){ const now=new Date().toISOString(); const d = normalize({ ...c, id: undefined, firstName: c.firstName ? c.firstName : c.firstName, lastName: (c.lastName ? c.lastName + " " : "") + "(copy)", interactions: [], syncedAt: "", createdAt: now, updatedAt: now }); contacts.push(d); dataVer++; selectedId = d.id; render(); await persist(d); toast("Duplicated"); } break;
     }
   });
   document.addEventListener("keydown", e => {
@@ -3161,6 +3335,163 @@ address = one line. Do not invent anything that is not visible on the card. If t
     if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !inlineEdit){ e.preventDefault(); openEdit(null); }
     if (e.key.toLowerCase() === "e" && !e.metaKey && !e.ctrlKey && !inlineEdit && view === "contacts" && selectedId){ e.preventDefault(); startInlineEdit("firstName"); }
   });
+
+  // ---------- number parsing shared with the phones migration ----------
+  // Same rules as /home/claude/phone/expand_numbers.py for numbers written in Notes ("Téléphone (Label)\: n")
+  const FN_PHONE_CHARS = /^[\d+\s().\-*#]+$/;
+  const FN_PHONE_RUN = /[\d+][\d+\s().\-*#]*/g;
+  const FN_NOTE_PHONE = /^(?:T[ée]l[ée]phone|Phone|Tel)\s*(\([^)]*\))\s*\\?:\s*([\s\S]*)$/i;
+  const fnKey = s => { const d = String(s).replace(/\D/g, ""); return d.length > 10 ? d.slice(-10) : d; };
+  function fnSplit(s, seps){
+    const parts = []; let cur = "", depth = 0;
+    for (const ch of s){
+      if (ch === "(") depth++; else if (ch === ")" && depth) depth--;
+      if (depth === 0 && seps.includes(ch)){ parts.push(cur); cur = ""; } else cur += ch;
+    }
+    parts.push(cur); return parts;
+  }
+  function fnToken(tok){
+    let t = tok.trim().replace(/\/+$/, "").trim();
+    if (!t) return null;
+    if (t.includes(":")) t = t.slice(t.lastIndexOf(":") + 1).trim().replace(/^\\+/, "").trim();
+    if (!FN_PHONE_CHARS.test(t)){
+      const t2 = t.replace(/\([^)]*[A-Za-z][^)]*\)/g, " ");
+      const runs = (t2.match(FN_PHONE_RUN) || []).map(r => r.trim()).filter(r => fnKey(r).length >= 6);
+      if (runs.length === 1) t = runs[0];
+    }
+    return fnKey(t).length < 6 ? null : t;
+  }
+  const fnOld = label => { const m = /\(([^)]*)\)/.exec(label); return !!(m && m[1].trim().toUpperCase().startsWith("X-")); };
+  // ---------- one-time migration to the Phones list (flag "cm.phones.v1") ----------
+  // 1) back up  2) merge the "Name 2", "Name 3" rows the old notes tool created back into the original
+  // 3) move "Téléphone (Label)\: n" numbers out of Notes into phones  4) idempotent: safe to run again
+  const PM_FLAG = "cm.phones.v1", PM_BACKUP = "contact-manager.backup.pre-phones";
+  // the old tool only copied name, category and priority onto the extra rows; anything more means a real person
+  const pmBare = c => !(c.email || c.company || c.jobTitle || c.address || c.birthday || c.anniversary || c.website || c.howMet || c.introducedBy || c.keepInTouch
+    || c.nextFollowUp || c.followUpNote || tagList(c).length || c.favorite || c.archived || (c.interactions || []).length || c.photo || c.icon);
+  // label of an extra row from its note ("old: Téléphone (X-Orange)" -> Old, "Téléphone (Home)" -> Home)
+  function pmLabel(note){
+    const n = String(note || "").trim();
+    if (!n) return "Other";
+    if (/^old:/i.test(n)) return "Old";
+    const m = /^(?:T[ée]l[ée]phone|Phone|Tel)\s*(\([^)]*\))/i.exec(n);
+    if (m) return fnOld(m[1]) ? "Old" : (m[1].slice(1, -1).trim().slice(0, PH_LABEL_MAX) || "Other");
+    return n.slice(0, PH_LABEL_MAX);
+  }
+  const pmNoteOk = note => { const n = String(note || "").trim(); return !n || /^old:/i.test(n) || /^(?:T[ée]l[ée]phone|Phone|Tel)\s*\(/i.test(n); };
+  // plan: pure function over the current lists; returns what would change
+  function pmPlan(list){
+    const rep = { merged: [], skipped: [], moved: 0, notesCleaned: 0, split: 0, changed: new Map(), removed: new Set() }, pm = new Map();
+    const byName = new Map();
+    for (const c of list){ const nm = cachedName(c); if (!byName.has(nm)) byName.set(nm, []); byName.get(nm).push(c); }
+    const cand = [];
+    for (const c of list){
+      const m = /^(.*\S) (\d+)$/.exec(cachedName(c));
+      if (m && +m[2] >= 2) cand.push({ c, base: m[1], n: +m[2] });
+    }
+    const candIds = new Set(cand.map(x => x.c.id));
+    cand.sort((a, b) => a.n - b.n);
+    for (const x of cand){
+      const origs = (byName.get(x.base) || []).filter(o => o.id !== x.c.id);
+      const label = `${x.base} ${x.n}`;
+      if (origs.length !== 1){ rep.skipped.push({ name: label, why: origs.length ? "several originals" : "no original" }); continue; }
+      const o = origs[0];
+      if (candIds.has(o.id)){ rep.skipped.push({ name: label, why: "original is itself numbered" }); continue; }
+      if (!String(x.c.phone || "").trim() || !pmBare(x.c) || !pmNoteOk(x.c.notes)){ rep.skipped.push({ name: label, why: "has other details" }); continue; }
+      const add = [{ number: x.c.phone, label: pmLabel(x.c.notes) }, ...(x.c.phones || [])];
+      pm.set(o.id, (pm.get(o.id) || []).concat(add));
+      rep.merged.push({ original: x.base, extra: label, number: x.c.phone, label: add[0].label });
+      rep.removed.add(x.c.id);
+    }
+    for (const c of list){
+      if (rep.removed.has(c.id)) continue;
+      let phone = c.phone || "", phones = (c.phones || []).slice(), notes = c.notes || "", touched = false;
+      const add = (pm.get(c.id) || []).slice();
+      if (pm.has(c.id)) touched = true;
+      // a primary field holding several numbers ("a; b / c") -> first stays, the rest go to phones
+      const own = fnSplit(phone, ";,/\n").map(fnToken).filter(Boolean);
+      if (own.length > 1){ phone = own[0]; for (const n of own.slice(1)) add.push({ number: n, label: "Other" }); rep.split++; touched = true; }
+      // numbers written in notes as "Téléphone (Label)\: n"
+      const parts = notes.split(/(\s\/\s|\s\/$|\n)/), keep = [], found = [];
+      for (let i = 0; i < parts.length; i += 2){
+        const seg = parts[i].trim(), sep = parts[i + 1] || "";
+        if (!seg) continue;
+        const m = FN_NOTE_PHONE.exec(seg);
+        const nums = m ? fnSplit(m[2], ";,").map(fnToken).filter(Boolean) : [];
+        if (nums.length){ const lab = fnOld(m[1]) ? "Old" : (m[1].slice(1, -1).trim().slice(0, PH_LABEL_MAX) || "Other"); for (const n of nums) found.push({ number: n, label: lab }); }
+        else keep.push({ t: parts[i].trim(), sep });
+      }
+      if (found.length){
+        notes = keep.map((k, i) => k.t + (i < keep.length - 1 ? k.sep : "")).join("").replace(/[\s\/]+$/, "").trim();
+        add.push(...found); rep.moved += found.length; rep.notesCleaned++; touched = true;
+      }
+      if (!touched) continue;
+      let all = normPhones(phones.concat(add), phone);
+      if (!phone){   // no primary yet: promote the first number that is not an old one
+        const k = all.findIndex(p => !/^old$/i.test(p.label));
+        if (k >= 0){ phone = all[k].number; all = normPhones(all.filter((_, i) => i !== k), phone); }
+      }
+      rep.changed.set(c.id, { phone, phones: all, notes });
+    }
+    return rep;
+  }
+  async function pmBackupDownload(json){
+    const name = "contacts-before-phones-" + new Date().toISOString().slice(0, 10) + ".json";
+    try {
+      if (downloads) await downloads.save({ filename: name, data: json });
+      else {
+        const a = document.createElement("a"), url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+    } catch(e){ /* the copy in localStorage is the safety net */ }
+  }
+  let pmRunning = false;
+  async function maybeMigrate(){
+    if (pmRunning) return;
+    try { if (localStorage.getItem(PM_FLAG)) return; } catch(e){ return; }
+    pmRunning = true;
+    try {
+      const all = contacts.concat(trash);
+      if (!all.length){ try { localStorage.setItem(PM_FLAG, JSON.stringify({ at: new Date().toISOString(), merged: [], moved: 0, notesCleaned: 0 })); } catch(e){} return; }
+      const rep = pmPlan(contacts);
+      const trashRep = pmPlan(trash);
+      for (const [id, v] of trashRep.changed) rep.changed.set(id, v);
+      rep.moved += trashRep.moved; rep.notesCleaned += trashRep.notesCleaned; rep.split += trashRep.split;
+      const byId = new Map(all.map(c => [c.id, c]));
+      const changedIds = [...rep.changed.keys()].filter(id => { const c = byId.get(id), v = rep.changed.get(id); return JSON.stringify([c.phone || "", c.phones || [], c.notes || ""]) !== JSON.stringify([v.phone, v.phones, v.notes]); });
+      if (!changedIds.length && !rep.removed.size){ localStorage.setItem(PM_FLAG, JSON.stringify({ at: new Date().toISOString(), merged: [], moved: 0, notesCleaned: 0 })); return; }
+      // 1. backup, before anything changes
+      const raw = (backend === "local" && localStorage.getItem(LS_KEY)) || JSON.stringify(all);
+      try { localStorage.setItem(PM_BACKUP, raw); }
+      catch(e){ toast("Couldn't back up your contacts, so the phone-number update was skipped."); return; }
+      await pmBackupDownload(toJSON(all));
+      // 2 + 3. apply
+      const snapC = JSON.parse(JSON.stringify(contacts)), snapT = JSON.parse(JSON.stringify(trash));
+      const now = new Date().toISOString(), saveList = [];
+      for (const c of all){
+        const v = rep.changed.get(c.id);
+        if (v && changedIds.includes(c.id)){ c.phone = v.phone; c.phones = v.phones; c.notes = v.notes; c.updatedAt = now; saveList.push(c); }
+      }
+      contacts = contacts.filter(c => !rep.removed.has(c.id));
+      dataVer++; nameCache.clear();
+      if (selectedId && !contacts.some(c => c.id === selectedId)) selectedId = null;
+      render();
+      await batchSaves(async () => { for (const c of saveList) await persist(c); for (const id of rep.removed) await removeStored(id); });
+      const summary = { at: now, merged: rep.merged, skipped: rep.skipped, moved: rep.moved, notesCleaned: rep.notesCleaned, split: rep.split, changed: changedIds.length };
+      try { localStorage.setItem(PM_FLAG, JSON.stringify(summary)); } catch(e){}
+      try { console.info("cm.phones.v1", JSON.stringify(summary)); } catch(e){}
+      const bits = [];
+      if (rep.merged.length) bits.push(`merged ${rep.merged.length} extra row${rep.merged.length === 1 ? "" : "s"}`);
+      if (rep.moved) bits.push(`moved ${rep.moved} number${rep.moved === 1 ? "" : "s"} out of notes`);
+      toast("Phones list: " + (bits.join(", ") || "updated"), { label: "Undo", run: async () => {
+        const cur = new Map(contacts.concat(trash).map(c => [c.id, JSON.stringify(c)]));
+        const back = snapC.concat(snapT).filter(c => cur.get(c.id) !== JSON.stringify(c));
+        contacts = snapC; trash = snapT; dataVer++; nameCache.clear(); render();
+        await batchSaves(async () => { for (const c of back) await persist(c); });
+        toast("Undone");
+      } });
+    } finally { pmRunning = false; }
+  }
 
   initStorage();
 })();
