@@ -2,6 +2,10 @@
 
 A single-page contact manager (`index.html`) — no build step, just open it in a browser.
 
+## Copyright
+
+Copyright © 2026 Mahmoud D. All rights reserved. See [`COPYRIGHT`](COPYRIGHT).
+
 ## Features
 - Add, view, favorite, duplicate and delete contacts
 - **Edit in place**: select a contact and click Edit or any field to update it right in the detail view (Enter to save, Esc to cancel, warns before discarding unsaved changes)
