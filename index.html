@@ -259,6 +259,7 @@
   .dupitem .nm svg.i{width:15px;height:15px;color:var(--warn)}
   .dupitem .sub{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dupitem .acts{display:flex;gap:6px;align-items:center}
+  .dupmore{display:flex;justify-content:center;padding:12px}
   .keep{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
   .btn.sm{padding:5px 10px;font-size:12px}
   .ccrules{list-style:none;margin:8px 0 12px;padding:0}
@@ -1704,6 +1705,8 @@
   }
   const keepChoice = new Map();   // "kind|key" -> id to keep when merging
   let dupQuery = "";
+  let dupVisibleGroups = 25;
+  const dupVisibleItems = new Map();
 
   function renderBadges(){
     const extra = k => dupGroups(k).reduce((s,g) => s + g.items.length - 1, 0);
@@ -1891,6 +1894,7 @@
     const all = dupGroups(kind);
     const q = dupQuery.toLowerCase().trim();
     const groups = q ? all.filter(g => g.items.some(c => [fullName(c), ...phoneList(c).map(p => p.number), c.email].join(" ").toLowerCase().includes(q))) : all;
+    const visibleGroups = groups.slice(0, dupVisibleGroups);
     const extra = all.reduce((s,g) => s + g.items.length - 1, 0);
     const title = isPhone ? "Duplicate numbers" : "Duplicate names";
     const sub = all.length
@@ -1908,15 +1912,17 @@
     }
     h += `<input class="dupsearch" id="dupSearch" type="search" placeholder="Filter these groups…" value="${esc(dupQuery)}">`;
     if (!groups.length) h += `<p style="color:var(--muted)">No groups match “${esc(dupQuery)}”.</p>`;
-    for (const g of groups){
+    for (const g of visibleGroups){
       const gk = kind + "|" + g.key;
       let keepId = keepChoice.get(gk);
       if (!g.items.some(c => c.id === keepId)) keepId = g.items[0].id;
       const label = isPhone ? ((phoneList(g.items[0]).find(p => digKey(p.number) === g.key) || {}).number || g.items[0].phone) : fullName(g.items[0]);
+      const visibleItemCount = dupVisibleItems.get(gk) || 20;
+      const visibleItems = g.items.slice(0, visibleItemCount);
       h += `<div class="dupgroup"><div class="gh">
         <span class="gi">${ic(isPhone ? "phone" : "user")}</span><span class="key">${esc(label)}</span>${g.reason === "Same email" ? `<span class="pill" title="Names look alike and the email address matches">${ic("mail")}Same email</span>` : ""}<span class="n">${g.items.length} contacts</span>
         <button class="btn sm primary" data-dact="merge" data-g="${esc(gk)}">Merge into one</button></div>`;
-      for (const c of g.items){
+      for (const c of visibleItems){
         h += `<div class="dupitem ${c.id===keepId?"kept":""}">
           ${avatar(c)}
           <div class="meta"><div class="nm">${esc(fullName(c))} ${c.favorite?'<span class="star">★</span>':""}</div>
@@ -1927,8 +1933,16 @@
             <button class="btn sm danger" data-dact="delete" data-id="${esc(c.id)}" aria-label="Delete">🗑</button>
           </div></div>`;
       }
+      if (g.items.length > visibleItems.length){
+        const nextCount = Math.min(100, g.items.length - visibleItems.length);
+        h += `<div class="dupmore"><button type="button" class="btn sm" data-dact="moreGroupItems" data-g="${esc(gk)}">Show next ${nextCount} contacts · ${g.items.length - visibleItems.length} remaining</button></div>`;
+      }
+      if (visibleItemCount > 20){
+        h += `<div class="dupmore"><button type="button" class="btn sm" data-dact="fewerGroupItems" data-g="${esc(gk)}">Show fewer contacts</button></div>`;
+      }
       h += `</div>`;
     }
+    if (groups.length > visibleGroups.length) h += `<div class="dupmore"><button type="button" class="btn" data-dact="moreGroups">Show next ${Math.min(25, groups.length - visibleGroups.length)} groups · ${groups.length - visibleGroups.length} remaining</button></div>`;
     h += `<p class="note">Merging keeps the contact marked <b>Keep</b>, fills its empty fields from the others, combines tags and notes, saves any different email into its notes, adds each different phone number as its own row under it (“Name 2”, “Name 3”…), and keeps the other originals in <b>Merged originals</b> so you can restore them.</p></div>`;
     const hadFocus = document.activeElement?.id === "dupSearch";
     $("#main").innerHTML = h;
@@ -2093,6 +2107,15 @@
 
   function handleDup(btn){
     const act = btn.dataset.dact;
+    if (act === "moreGroups"){ dupVisibleGroups += 25; renderDups(); return; }
+    if (act === "moreGroupItems"){
+      dupVisibleItems.set(btn.dataset.g, (dupVisibleItems.get(btn.dataset.g) || 20) + 100);
+      renderDups(); return;
+    }
+    if (act === "fewerGroupItems"){
+      dupVisibleItems.delete(btn.dataset.g);
+      renderDups(); return;
+    }
     if (act === "emReview"){ openEmailPreview(); return; }
     if (act === "view"){ setView("contacts"); selectedId = btn.dataset.id; render(); return; }
     if (act === "delete"){ const c = contacts.find(x => x.id === btn.dataset.id); if (c) confirmDelete(c); return; }
@@ -2214,6 +2237,10 @@
   const HASH = { "review": "weekly-review", "trash": "recently-deleted", "scan": "scan", "reminders": "reminders", "dup-phone": "duplicate-numbers", "dup-name": "duplicate-names", "country-fix": "country-fix", "merged": "merged-originals" };
   function viewFromHash(){ const h = location.hash.slice(1); return Object.keys(HASH).find(k => HASH[k] === h) || "contacts"; }
   function setView(v){
+    if (v !== view){
+      if (view === "dup-phone" || view === "dup-name") dupVisibleItems.clear();
+      if (v === "dup-phone" || v === "dup-name") dupVisibleGroups = 25;
+    }
     view = v;
     const want = HASH[v] ? "#" + HASH[v] : "";
     if (location.hash !== want){
@@ -2221,7 +2248,14 @@
     }
   }
   view = viewFromHash();
-  window.addEventListener("hashchange", () => { view = viewFromHash(); render(); });
+  window.addEventListener("hashchange", () => {
+    const next = viewFromHash();
+    if (next !== view){
+      if (view === "dup-phone" || view === "dup-name") dupVisibleItems.clear();
+      if (next === "dup-phone" || next === "dup-name") dupVisibleGroups = 25;
+    }
+    view = next; render();
+  });
   document.getElementById("bottomnav").addEventListener("click", e => {
     const b = e.target.closest("[data-view]"); if (!b) return;
     const v = b.dataset.view;
@@ -4576,7 +4610,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
   $("#main").addEventListener("input", e => {
     if (e.target.id === "dupSearch"){
       const v = e.target.value; clearTimeout(dupSearchT);
-      const go = () => { const el = $("#dupSearch"); if (!el || (view !== "dup-phone" && view !== "dup-name")) return; dupQuery = el.value; renderDups(); };
+      const go = () => { const el = $("#dupSearch"); if (!el || (view !== "dup-phone" && view !== "dup-name")) return; dupQuery = el.value; dupVisibleGroups = 25; dupVisibleItems.clear(); renderDups(); };
       if (!v) go(); else dupSearchT = setTimeout(go, 120);
     }
   });
@@ -4590,7 +4624,7 @@ address = one line. Do not invent anything that is not visible on the card. If t
   $("#main").addEventListener("keydown", e => {
     if (e.key === "Enter" && e.target.classList && e.target.classList.contains("cc-in")){ e.preventDefault(); ccRow(e.target.closest(".ccrow"), false); return; }
     if (e.key === "Enter" && e.target.id === "ccSearch"){ clearTimeout(ccSearchT); ccQuery = e.target.value; renderCountryFix(); return; }
-    if (e.key === "Enter" && e.target.id === "dupSearch"){ clearTimeout(dupSearchT); dupQuery = e.target.value; renderDups(); }
+    if (e.key === "Enter" && e.target.id === "dupSearch"){ clearTimeout(dupSearchT); dupQuery = e.target.value; dupVisibleGroups = 25; dupVisibleItems.clear(); renderDups(); }
   });
   $("#main").addEventListener("click", async e => {
     const cc = e.target.closest("[data-cc]"); if (cc){ handleCC(cc); return; }
