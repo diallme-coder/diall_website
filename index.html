@@ -85,6 +85,9 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
   .field.full{grid-column:1/-1}
+  .field-disclosure{grid-column:1/-1;border-top:1px solid var(--line);margin-top:4px;padding-top:12px}
+  .field-disclosure summary{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:650;padding:3px 0 12px}
+  .field-disclosure summary span{color:var(--muted);font-size:12px;font-weight:400}
   .field label{font-size:12px;font-weight:600;color:var(--muted)}
   .field input,.field textarea{padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
   .field input:focus,.field textarea:focus,.searchbar input:focus{outline:2px solid var(--accent);outline-offset:-1px}
@@ -292,7 +295,8 @@
   @media (max-width:760px){
     .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
     .app.viewing aside{display:none}
-    .app:not(.viewing) main{display:none}
+    .app:not(.viewing):not(.emptybook) main{display:none}
+    .app.emptybook aside{display:none}
     .back{display:inline-flex}
     .grid2{grid-template-columns:1fr}
     .row{grid-template-columns:1fr;gap:2px}
@@ -461,6 +465,21 @@
   .empty h2{font-family:var(--font-display);font-weight:400;font-size:32px;color:var(--ink)}
   .emptyart{width:72px;height:72px;margin:0 auto;border-radius:20px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
   .emptyart svg{width:34px;height:34px}
+  .empty-welcome{min-height:100%;height:auto;padding:28px 20px;background:radial-gradient(ellipse at 50% 42%,var(--accent-soft),transparent 60%)}
+  .empty-card{width:min(100%,560px);padding:clamp(28px,5vw,48px);background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+  .empty-kicker{margin:22px 0 8px;color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .empty-welcome h2{margin:0 auto 10px;max-width:440px;font-size:36px;line-height:1.04;text-wrap:balance}
+  .empty-copy{max-width:410px;margin:0 auto;color:var(--muted);font-size:15px;line-height:1.6}
+  .empty-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:24px 0 18px}
+  .empty-actions .btn{min-height:44px}
+  .empty-note{margin:0;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  @media (max-width:480px){
+    .empty-welcome{padding:18px 14px}
+    .empty-card{padding:28px 20px}
+    .empty-welcome h2{font-size:31px}
+    .empty-actions{flex-direction:column}
+    .empty-actions .btn{justify-content:center;width:100%}
+  }
 
   /* full-width views (reminders, scan, duplicates) */
   .dupwrap{max-width:900px;padding:28px 28px 48px}
@@ -671,6 +690,21 @@
   .addrf input{width:100%;min-width:0}
   .addrf .addrrow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.7fr) minmax(0,1fr);gap:8px}
   @media (max-width:560px){ .addrf .addrrow{grid-template-columns:1fr} }
+  .syncstack{display:grid;gap:12px}
+  .syncpanel{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel-2)}
+  .syncrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .syncrow .syncmeta{flex:1;min-width:180px}
+  .syncrow h4{margin:0 0 3px;font-size:14px}
+  .syncrow p,.syncnote{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
+  .syncactions{display:flex;gap:7px;flex-wrap:wrap}
+  .syncconflicts{display:grid;gap:10px;margin-top:12px}
+  .syncconflict{border:1px solid var(--line);border-radius:10px;padding:12px}
+  .syncchoice{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:13px}
+  .syncchoice input{margin-top:3px}
+  .syncops{margin:10px 0 0;padding-left:20px;font-size:13px}
+  .syncstatus{min-height:18px;margin:10px 0 0;color:var(--muted);font-size:13px}
+  .syncstatus:empty{display:none}
+  @media(max-width:560px){.syncrow .syncmeta{min-width:100%}}
 </style>
 </head>
 <body>
@@ -684,6 +718,7 @@
     <button class="btn" id="findMatchesBtn" title="Find matches in file"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="lbl">Find matches in file</span></button>
     <input type="file" id="findMatchesFile" accept=".vcf,.vcard,.csv,.txt,text/vcard,text/csv" hidden>
     <button class="btn" id="exportAllBtn" title="Export all contacts"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg><span class="lbl">Export</span></button>
+    <button class="btn" id="syncBtn" title="Account and contact sync"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span class="lbl">Sync</span></button>
     <button class="btn primary" id="addBtn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">New contact</span></button>
   </header>
 
@@ -737,6 +772,10 @@
         <div class="field full"><label for="f_phone">Phone</label><input id="f_phone" name="phone" type="tel"><div class="phedit" id="phEdit"></div></div>
         <div class="field full"><label for="f_email">Email</label><input id="f_email" name="email" type="email"></div>
         <div class="field"><label for="f_company">Company</label><input id="f_company" name="company"></div>
+      </div>
+      <details class="field-disclosure" id="editMore">
+        <summary>More details <span>Optional</span></summary>
+        <div class="grid2">
         <div class="field"><label for="f_jobTitle">Job title</label><input id="f_jobTitle" name="jobTitle"></div>
         <div class="full" id="addrBox"></div>
         <div class="field"><label for="f_birthday">Birthday</label><input id="f_birthday" name="birthday" type="date"></div>
@@ -751,8 +790,9 @@
         <div class="field"><label for="f_website">Website</label><input id="f_website" name="website" placeholder="https://"></div>
         <div class="field full"><label for="f_tags">Tags <span style="font-weight:400">(comma separated)</span></label><input id="f_tags" name="tags" placeholder="family, work"></div>
         <div class="field full"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes" rows="3"></textarea></div>
-      </div>
-      <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="f_favorite" name="favorite"> Mark as favorite</label>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="f_favorite" name="favorite"> Mark as favorite</label>
+      </details>
       <div class="err" id="editErr"></div>
     </div>
     <footer><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">Save contact</button></footer>
@@ -894,6 +934,15 @@
   </div>
 </div>
 
+<!-- Account and provider contact sync -->
+<div class="scrim" id="syncScrim">
+  <div class="modal" style="max-width:680px" role="dialog" aria-modal="true" aria-labelledby="syncTitle">
+    <header><h3 id="syncTitle">Account &amp; contact sync</h3><button type="button" class="btn ghost" data-close aria-label="Close">✕</button></header>
+    <div class="body" id="syncBody"></div>
+    <footer id="syncFoot"></footer>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (() => {
@@ -921,10 +970,13 @@
   let exportFmt = "csv";
 
   // storage backends
-  let backend = "local";     // "db" | "local"
+  let backend = "local";     // "db" | "api" | "local"
   let dbCol = null;
   let downloads = null;
   const LS_KEY = "contact-manager.v1";
+  let apiAvailable = false, apiAccount = null, apiCsrfToken = "", apiFailure = "";
+  let accountConnections = [], syncPreviewState = null, syncMessage = "";
+  let accountContactIds = new Map(), localSyncSnapshot = [], localMigrationPending = false;
 
   const $ = (s, r=document) => r.querySelector(s);
   // ---- phone numbers: `phone` is the primary number, `phones` holds extra {number, label} entries ----
@@ -1079,33 +1131,157 @@
   // ---------- persistence ----------
   // dataVer bumps whenever contacts/trash change or are saved; derived-data caches key on it.
   let dataVer = 0, saveDepth = 0, savePending = false;
+  const accountPendingWrites = new Map();
   function writeLocal(){
     try { localStorage.setItem(LS_KEY, JSON.stringify(contacts.concat(trash))); } catch(e){}
     if (mergedDirty){ mergedDirty = false; try { localStorage.setItem(MERGED_KEY, JSON.stringify(merged)); } catch(e){} }
   }
   function loadMerged(){ try { const v = JSON.parse(localStorage.getItem(MERGED_KEY) || "[]"); return Array.isArray(v) ? v.filter(r => r && r.source && r.source.id) : []; } catch(e){ return []; } }
-  // archive write: rides along with the next live-contacts write (one flush inside batchSaves); the account backend keeps the archive in this browser
-  function saveMerged(){ mergedDirty = true; if (backend === "db"){ writeLocal(); dataVer++; } else saveLocal(); }
+  // archive write: rides along with the next live-contacts write; account mode keeps it in this browser.
+  function saveMerged(){
+    mergedDirty = true;
+    if (backend === "api"){
+      try { localStorage.setItem(MERGED_KEY, JSON.stringify(merged)); mergedDirty = false; }
+      catch(e){ toast("The merged-contact archive could not be saved in this browser."); }
+      dataVer++;
+    } else if (backend === "db"){ writeLocal(); dataVer++; }
+    else saveLocal();
+  }
   function saveLocal(){ dataVer++; if (saveDepth){ savePending = true; return; } writeLocal(); }
   // run fn with localStorage writes coalesced into one flush at the end (even if fn throws)
   async function batchSaves(fn){
     saveDepth++;
     try { return await fn(); }
-    finally { if (!--saveDepth && savePending){ savePending = false; writeLocal(); } }
+    finally {
+      if (!--saveDepth){
+        if (savePending){ savePending = false; writeLocal(); }
+        if (backend === "api" && accountPendingWrites.size) await flushAccountWrites();
+      }
+    }
   }
   function loadLocal(){ try { const v = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); return Array.isArray(v) ? v.map(normalize) : []; } catch(e){ return []; } }
+  function backupAccountContact(id, data){
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+      const list = Array.isArray(saved) ? saved : [];
+      const index = list.findIndex(contact => contact && contact.id === id);
+      if (index >= 0) list[index] = data;
+      else list.push(data);
+      localStorage.setItem(LS_KEY, JSON.stringify(list));
+      return true;
+    } catch(e){ return false; }
+  }
+
+  async function flushAccountWrites(){
+    while (accountPendingWrites.size){
+      const entries = [...accountPendingWrites.entries()];
+      const batches = [];
+      let batch = [], size = 2;
+      for (const [id, write] of entries){
+        const remoteId = accountContactIds.get(id);
+        const item = write.delete ? { id: write.remoteId || remoteId, delete: true }
+          : { ...(remoteId ? { id: remoteId } : {}), data: { ...write.contact, deletedAt: write.contact.deletedAt || null } };
+        if (item.data && JSON.stringify(item.data).length > 3 * 1024 * 1024){
+          backupAccountContact(id, item.data);
+          setApiFailure(new Error("A contact is too large to save to the account service.")); return;
+        }
+        const bytes = new Blob([JSON.stringify(item)]).size + (batch.length ? 1 : 0);
+        if (bytes > 4 * 1024 * 1024){
+          if (item.data) backupAccountContact(id, item.data);
+          setApiFailure(new Error("A contact is too large to save to the account service.")); return;
+        }
+        if (batch.length && (batch.length >= 100 || size + bytes > 4 * 1024 * 1024)){
+          batches.push(batch); batch = []; size = 2;
+        }
+        batch.push({ id, item }); size += bytes;
+      }
+      if (batch.length) batches.push(batch);
+      for (const group of batches){
+        try {
+          const result = await apiRequest("/api/contacts/bulk", {
+            method: "POST", body: JSON.stringify({ contacts: group.map(x => x.item) })
+          });
+          for (const { id, item } of group){
+            accountPendingWrites.delete(id);
+            if (item.delete) accountContactIds.delete(id);
+          }
+          for (const row of result.contacts || []){
+            const internalId = typeof row.data?.id === "string" ? row.data.id : row.id;
+            accountContactIds.set(internalId, row.id);
+          }
+          apiFailure = ""; setStore();
+        } catch(e){
+          for (const { id, item } of group) if (item.data) backupAccountContact(id, item.data);
+          setApiFailure(e); return;
+        }
+      }
+    }
+  }
+
+  async function apiRequest(path, options = {}){
+    const headers = new Headers(options.headers || {});
+    if (options.body != null) headers.set("Content-Type", "application/json");
+    if (["POST","PATCH","DELETE"].includes(String(options.method || "GET").toUpperCase()) && apiCsrfToken) headers.set("X-CSRF-Token", apiCsrfToken);
+    const response = await fetch(path, { ...options, headers, credentials: "same-origin", cache: "no-store" });
+    if (response.status === 204) return null;
+    const text = await response.text();
+    let result = {};
+    if (text){ try { result = JSON.parse(text); } catch { result = {}; } }
+    if (!response.ok) throw new Error(result.error || `Account service returned ${response.status}.`);
+    return result;
+  }
+
+  function setApiFailure(error){
+    apiFailure = error instanceof Error ? error.message : "Account save failed.";
+    setStore("apiError");
+    toast(`Account save failed: ${apiFailure}`);
+  }
 
   async function persist(c){
     dataVer++;
     if (backend === "db"){
       try { await dbCol.doc(c.id).set(JSON.parse(JSON.stringify(c))); }
       catch(e){ handleDbError(e); }
+    } else if (backend === "api"){
+      if (saveDepth){ accountPendingWrites.set(c.id, { contact: c }); return; }
+      try {
+        const data = { ...c, deletedAt: c.deletedAt || null };
+        const id = accountContactIds.get(c.id);
+        if (id){
+          await apiRequest(`/api/contacts/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ data }) });
+        } else {
+          const result = await apiRequest("/api/contacts", { method: "POST", body: JSON.stringify({ data }) });
+          if (result.contact?.id) accountContactIds.set(c.id, result.contact.id);
+        }
+        apiFailure = ""; setStore();
+      } catch(e){
+        accountPendingWrites.set(c.id, { contact: c });
+        if (!backupAccountContact(c.id, { ...c, deletedAt: c.deletedAt || null })) {
+          toast("This change could not be backed up in this browser; keep this page open until account storage is available.");
+        }
+        setApiFailure(e);
+      }
     } else saveLocal();
   }
   async function removeStored(id){
     dataVer++;
     if (backend === "db"){
       try { await dbCol.doc(id).delete(); } catch(e){ handleDbError(e); }
+    } else if (backend === "api"){
+      const remoteId = accountContactIds.get(id);
+      if (!remoteId){
+        accountPendingWrites.delete(id);
+        return;
+      }
+      if (saveDepth){ accountPendingWrites.set(id, { delete: true, remoteId }); return; }
+      try {
+        await apiRequest(`/api/contacts/${encodeURIComponent(remoteId)}?permanent=true`, { method: "DELETE" });
+        accountContactIds.delete(id);
+        apiFailure = ""; setStore();
+      } catch(e){
+        accountPendingWrites.set(id, { delete: true, remoteId });
+        setApiFailure(e);
+      }
     } else saveLocal();
   }
   function handleDbError(e){
@@ -1119,17 +1295,78 @@
     const dot=$("#storeDot"), txt=$("#storeTxt");
     if (state === "loading"){ dot.className="dot"; txt.textContent="Loading…"; return; }
     if (state === "stale"){ dot.className="dot local"; txt.textContent="Can't reach storage yet"; return; }
+    if (state === "apiError"){ dot.className="dot local"; txt.textContent="Account save failed"; return; }
     if (backend === "db"){ dot.className="dot ok"; txt.textContent="Saved to your account"; }
+    else if (backend === "api"){ dot.className="dot ok"; txt.textContent="Saved to your account"; }
     else { dot.className="dot local"; txt.textContent="Saved in this browser"; }
+  }
+
+  async function fetchAccountContacts(){
+    const all = [];
+    let cursor = null;
+    do {
+      const params = new URLSearchParams({ limit: "500" });
+      if (cursor) params.set("cursor", cursor);
+      const page = await apiRequest(`/api/contacts?${params}`);
+      if (!Array.isArray(page.contacts)) throw new Error("The account service returned an invalid contacts list.");
+      all.push(...page.contacts);
+      cursor = page.nextCursor || null;
+    } while (cursor);
+    accountContactIds = new Map();
+    return all.map(row => {
+      const internalId = typeof row.data?.id === "string" ? row.data.id : row.id;
+      const data = { ...row.data, id: internalId };
+      if (row.deleted_at) data.deletedAt = row.deleted_at;
+      else delete data.deletedAt;
+      const contact = normalize(data);
+      accountContactIds.set(contact.id, row.id);
+      return contact;
+    });
+  }
+
+  function accountMigrationKey(){ return apiAccount ? `cm.account-migration.${apiAccount.id}` : ""; }
+
+  async function initializeAccountStorage(){
+    if (!["http:","https:"].includes(location.protocol)){ setStore(); return; }
+    try {
+      const response = await fetch("/api/session", { credentials: "same-origin", cache: "no-store" });
+      if (response.status === 404){ setStore(); return; }
+      if (response.status === 401){ apiAvailable = true; setStore(); return; }
+      if (!response.ok){ setStore("stale"); return; }
+      const session = await response.json();
+      if (!session.account?.id || !session.csrfToken) throw new Error("The account service returned an invalid session.");
+      apiAvailable = true; apiAccount = session.account; apiCsrfToken = session.csrfToken; backend = "api";
+      const remote = await fetchAccountContacts();
+      splitAll(remote);
+      if (localSyncSnapshot.length && !localStorage.getItem(accountMigrationKey())) localMigrationPending = true;
+      apiFailure = ""; setStore(); render(); maybeMigrateAll();
+      const url = new URL(location.href);
+      const openSync = url.searchParams.has("signed_in") || url.searchParams.has("provider_connected");
+      url.searchParams.delete("signed_in"); url.searchParams.delete("provider_connected");
+      if (openSync){
+        history.replaceState(null, "", url.pathname + url.search + url.hash);
+        openModal("#syncScrim");
+        await refreshAccountConnections();
+        renderAccountSync();
+      }
+    } catch(e){
+      backend = "local"; apiAccount = null; apiCsrfToken = ""; setStore("stale");
+      apiAvailable = false;
+    }
   }
 
   async function initStorage(){
     merged = loadMerged();
-    splitAll(loadLocal());
+    localSyncSnapshot = loadLocal();
+    splitAll(localSyncSnapshot);
     purgeTrash();
     setStore("loading");
     render();
-    if (!window.claude || typeof window.claude.use !== "function"){ setStore(); maybeMigrateAll(); return; }
+    if (!window.claude || typeof window.claude.use !== "function"){
+      await initializeAccountStorage();
+      if (backend === "local") maybeMigrateAll();
+      return;
+    }
     try {
       claude.use("downloads").then(d => { downloads = d; }).catch(()=>{});
       const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
@@ -1251,7 +1488,7 @@
       const subFlag = c.phone ? phoneDisplay(c) + " " : "";
       const more = (c.phones || []).filter(p => p.number !== sub);
       const on = picked.has(c.id);
-      h += `<div class="item ${!selMode && c.id===selectedId?"sel":""} ${on?"picked":""}" data-id="${esc(c.id)}" ${selMode ? `role="checkbox" aria-checked="${on}" tabindex="0"` : ""}>
+      h += `<div class="item ${!selMode && c.id===selectedId?"sel":""} ${on?"picked":""}" data-id="${esc(c.id)}" role="${selMode ? "checkbox" : "button"}" aria-label="${esc(cachedName(c))}" ${selMode ? `aria-checked="${on}"` : (!selMode && c.id===selectedId ? `aria-current="true"` : "")} tabindex="0">
         ${selMode ? `<span class="cb ${on?"on":""}" aria-hidden="true">${ic("check")}</span>` : ""}${avatar(c)}
         <div class="meta"><div class="nm">${esc(cachedName(c))} ${c.favorite?'<span class="star">★</span>':""}${c.priority === "key" ? `<span class="keyflag" title="Key contact">${ic("flag")}</span>` : ""}${c.category ? `<span class="catdot" style="--c:${catColor(c.category)}" title="${esc(c.category)}"></span>` : ""}</div><div class="sub">${subFlag}${esc(sub)}</div>${more.length ? `<div class="sub phmore">${more.map(p => `${p.label ? `<i>${esc(p.label)}</i> ` : ""}${esc(p.number)}`).join(" · ")}</div>` : ""}</div></div>`;
     }
@@ -1271,14 +1508,20 @@
   function renderMain(){
     const c = contacts.find(x => x.id === selectedId);
     $("#app").classList.toggle("viewing", !!c);
+    $("#app").classList.toggle("emptybook", contacts.length === 0);
     if (!c){
       inlineEdit = false;
-      $("#main").innerHTML = contacts.length ? overviewHTML() : `<div class="empty"><div>
+      $("#main").innerHTML = contacts.length ? overviewHTML() : `<div class="empty empty-welcome"><section class="empty-card" aria-labelledby="emptyTitle">
         <div class="emptyart">${ic("book")}</div>
-        <h2>Your address book is empty</h2>
-        <p>Add your first contact, or bring in your phone's address book from a vCard, CSV or JSON file.</p>
-        <div class="row-btns" style="justify-content:center;margin-top:16px">
-          <button class="btn primary" data-act="add">${ic("plus")}New contact</button><button class="btn" data-act="import">${ic("import")}Import</button></div></div></div>`;
+        <p class="empty-kicker">A little more connected</p>
+        <h2 id="emptyTitle">Keep the people behind your work close.</h2>
+        <p class="empty-copy">Start with one person you want to stay in touch with, or bring in the address book you already have.</p>
+        <div class="empty-actions">
+          <button class="btn primary" data-act="add">${ic("plus")}Add your first contact</button>
+          <button class="btn" data-act="import">${ic("import")}Import contacts</button>
+        </div>
+        <p class="empty-note">Add conversation notes and follow-up dates whenever you need them.</p>
+      </section></div>`;
       return;
     }
     if (inlineEdit){ renderInlineEditor(c); return; }
@@ -1356,9 +1599,67 @@
       const k = nameKey(c); if (k){ if (byName.has(k)) union(byName.get(k), c.id); else byName.set(k, c.id); }
       for (const e of emailKeys(c)){ if (!byEmail.has(e)) byEmail.set(e, []); byEmail.get(e).push(c); }
     }
-    for (const list of byEmail.values())
-      for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++)
-        if (nameKey(list[i]) !== nameKey(list[j]) && namesCompatible(list[i], list[j])){ union(list[i].id, list[j].id); viaEmail.add(list[i].id); viaEmail.add(list[j].id); }
+    // Index by last name and first-name prefix; empty and single-token names are handled as hubs.
+    const connectEmailRecords = records => {
+      if (records.length < 2) return;
+      const first = records[0].id;
+      for (const c of records){ union(first, c.id); viaEmail.add(c.id); }
+    };
+    for (const list of byEmail.values()){
+      const empty = [], singlesByLast = new Map(), byLast = new Map();
+      for (const c of list){
+        const tokens = nameTokens(c);
+        if (!tokens.length){ empty.push(c); continue; }
+        if (tokens.length === 1){
+          const last = tokens[0];
+          if (!singlesByLast.has(last)) singlesByLast.set(last, []);
+          singlesByLast.get(last).push(c);
+          continue;
+        }
+        const last = tokens[tokens.length - 1], first = tokens[0], key = nameKey(c);
+        if (!byLast.has(last)) byLast.set(last, new Map());
+        const byFirst = byLast.get(last);
+        if (!byFirst.has(first)) byFirst.set(first, new Map());
+        const byKey = byFirst.get(first);
+        if (!byKey.has(key)) byKey.set(key, []);
+        byKey.get(key).push(c);
+      }
+      if (empty.length && empty.length < list.length){
+        connectEmailRecords(list);
+        continue;
+      }
+      if (!byLast.size) continue;
+      for (const [last, byFirst] of byLast){
+        const singles = singlesByLast.get(last) || [];
+        if (singles.length){
+          const records = [...singles];
+          for (const byKey of byFirst.values()) for (const group of byKey.values()) records.push(...group);
+          connectEmailRecords(records);
+          continue;
+        }
+        for (const byKey of byFirst.values()){
+          if (byKey.size < 2) continue;
+          const records = [];
+          for (const group of byKey.values()) records.push(...group);
+          connectEmailRecords(records);
+        }
+        for (const [initial, initialKeys] of byFirst){
+          if (initial.length !== 1) continue;
+          for (const [first, targetKeys] of byFirst){
+            if (first === initial || !first.startsWith(initial)) continue;
+            for (const [targetKey, targetRecords] of targetKeys){
+              let initialKey;
+              for (const key of initialKeys.keys()) if (key !== targetKey){ initialKey = key; break; }
+              if (initialKey === undefined) continue;
+              const initialRecords = initialKeys.get(initialKey);
+              union(initialRecords[0].id, targetRecords[0].id);
+              for (const c of initialRecords) viaEmail.add(c.id);
+              for (const c of targetRecords) viaEmail.add(c.id);
+            }
+          }
+        }
+      }
+    }
     const groups = new Map();
     for (const c of contacts){ const r = find(c.id); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c); }
     return [...groups.values()].filter(v => v.length > 1).map(v => {
@@ -1956,6 +2257,219 @@
     else if (inlineEdit){ e.preventDefault(); leaveInline(renderMain); }
   });
 
+  function syncContactName(data){
+    return [data?.firstName, data?.lastName].filter(Boolean).join(" ").trim()
+      || data?.displayName || data?.company || data?.email || data?.phone || "Unnamed contact";
+  }
+  function syncConflictChoice(conflict){
+    if (conflict.kind === "remoteDeleted") return ["Keep my contact and add it back to the provider", "Accept the provider deletion"];
+    if (conflict.kind === "localDeleted") return ["Keep it deleted and remove it from the provider", "Restore the provider version"];
+    return ["Keep my version", "Use the provider version"];
+  }
+  function renderAccountSync(){
+    const body = $("#syncBody"), foot = $("#syncFoot");
+    if (!apiAvailable){
+      body.innerHTML = `<div class="syncpanel"><h4>Account sync isn’t available here</h4><p class="syncnote">This page is using browser storage. Deploy and configure the backend, then serve this page and API from the same origin to enable accounts and provider sync.</p><p style="margin:10px 0 0"><a href="backend/README.md" target="_blank" rel="noopener">Backend setup guide</a></p></div>`;
+      foot.innerHTML = `<button type="button" class="btn" data-close>Close</button>`;
+      return;
+    }
+    if (!apiAccount){
+      body.innerHTML = `<div class="syncstack">
+        <p class="syncnote">Sign in to store contacts securely in your account and connect Google Contacts, Microsoft Outlook, or Apple iCloud. Your existing browser contacts stay on this device unless you choose to copy them.</p>
+        <div class="syncactions"><button type="button" class="btn primary" data-sync-act="login" data-provider="google">Continue with Google</button><button type="button" class="btn" data-sync-act="login" data-provider="microsoft">Continue with Microsoft</button></div>
+        ${syncMessage ? `<p class="syncstatus" role="status">${esc(syncMessage)}</p>` : ""}
+      </div>`;
+      foot.innerHTML = `<button type="button" class="btn" data-close>Close</button>`;
+      return;
+    }
+    const providers = [
+      ["google","Google Contacts"],["microsoft","Microsoft Outlook / 365"],["icloud","Apple iCloud Contacts"]
+    ];
+    const connected = new Set(accountConnections.map(c => c.provider));
+    const connectionHTML = accountConnections.length ? accountConnections.map(connection => {
+      const label = providers.find(p => p[0] === connection.provider)?.[1] || connection.label || connection.provider;
+      return `<div class="syncpanel"><div class="syncrow"><div class="syncmeta"><h4>${esc(label)}</h4><p>Connected${connection.cursor_valid ? " · incremental sync ready" : " · first sync will compare contacts"}</p></div><div class="syncactions"><button type="button" class="btn primary sm" data-sync-act="preview" data-id="${esc(connection.id)}">Preview sync</button><button type="button" class="btn sm" data-sync-act="disconnect" data-id="${esc(connection.id)}" data-label="${esc(label)}">Disconnect</button></div></div></div>`;
+    }).join("") : `<p class="syncnote">No contact providers connected yet.</p>`;
+    const connectHTML = providers.filter(p => !connected.has(p[0])).map(([provider,label]) =>
+      provider === "icloud" ? "" : `<button type="button" class="btn" data-sync-act="connect" data-provider="${provider}">Connect ${esc(label)}</button>`
+    ).join("");
+    const appleHTML = connected.has("icloud") ? "" : `<form id="appleConnectForm" class="syncpanel syncstack">
+      <div><h4 style="margin:0 0 4px">Connect Apple iCloud Contacts</h4><p class="syncnote">Use your Apple ID and an app-specific password. The password is sent only to this server and encrypted there; use HTTPS.</p></div>
+      <div class="field"><label for="appleUsername">Apple ID</label><input id="appleUsername" name="username" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="applePassword">App-specific password</label><input id="applePassword" name="appPassword" type="password" autocomplete="new-password" required minlength="8"></div>
+      <div><button type="submit" class="btn">Connect iCloud</button></div>
+    </form>`;
+    const localCount = localSyncSnapshot.length;
+    const migrationHTML = localMigrationPending ? `<div class="syncpanel syncstack"><div><h4 style="margin:0 0 4px">Bring this browser’s contacts into your account?</h4><p class="syncnote">Found ${localCount.toLocaleString()} contacts on this device and ${contacts.length.toLocaleString()} in your account. Copying adds contacts by ID; it does not overwrite account contacts. Your browser copy is kept as a backup.</p></div><div class="syncactions"><button type="button" class="btn primary" data-sync-act="migrate-local">Copy local contacts to account</button><button type="button" class="btn" data-sync-act="keep-account">Use account contacts</button></div></div>` : "";
+    const conflictCount = syncPreviewState?.preview?.conflicts?.length || 0;
+    let previewHTML = "";
+    if (syncPreviewState){
+      const { preview } = syncPreviewState;
+      const counts = {};
+      for (const op of preview.operations || []) counts[op.kind] = (counts[op.kind] || 0) + 1;
+      const opSummary = Object.entries(counts).map(([kind,count]) => `${count.toLocaleString()} ${kind}`).join(", ") || "No automatic changes";
+      const sample = (preview.operations || []).slice(0,20).map(op => {
+        const data = op.data || {};
+        const label = op.contactId ? contacts.concat(trash).find(c => accountContactIds.get(c.id) === op.contactId) : null;
+        return `<li>${esc(op.kind)} · ${esc(label ? fullName(label) : syncContactName(data))}</li>`;
+      }).join("");
+      const conflicts = preview.conflicts || [], page = syncPreviewState.page || 0, pageSize = 40;
+      const shown = conflicts.slice(page * pageSize, (page + 1) * pageSize);
+      const conflictHTML = shown.map((conflict, index) => {
+        const choices = syncConflictChoice(conflict), selected = syncPreviewState.choices.get(conflict.id);
+        const label = contacts.concat(trash).find(c => accountContactIds.get(c.id) === conflict.contactId);
+        const heading = label ? fullName(label) : syncContactName(conflict.local || conflict.remote);
+        return `<div class="syncconflict"><b>${esc(heading)}</b><p class="syncnote">${conflict.kind === "bothChanged" ? "Both copies changed since the last sync." : conflict.kind === "remoteDeleted" ? "This contact was deleted from the provider." : "This contact was deleted in your account."}</p>
+          <label class="syncchoice"><input type="radio" name="sync-conflict-${page}-${index}" data-conflict="${esc(conflict.id)}" value="local" ${selected === "local" ? "checked" : ""}><span>${esc(choices[0])}</span></label>
+          <label class="syncchoice"><input type="radio" name="sync-conflict-${page}-${index}" data-conflict="${esc(conflict.id)}" value="remote" ${selected === "remote" ? "checked" : ""}><span>${esc(choices[1])}</span></label></div>`;
+      }).join("");
+      previewHTML = `<div class="syncpanel"><div class="syncrow"><div class="syncmeta"><h4>Sync preview</h4><p>${esc(opSummary)} · ${conflictCount.toLocaleString()} conflict${conflictCount === 1 ? "" : "s"} need review</p></div></div>
+        ${sample ? `<details><summary>Review automatic changes${(preview.operations || []).length > 20 ? ` (first 20 of ${(preview.operations || []).length})` : ""}</summary><ul class="syncops">${sample}</ul></details>` : ""}
+        ${conflictCount ? `<div class="syncconflicts"><b>Conflict review · ${page * pageSize + 1}–${Math.min((page + 1) * pageSize, conflictCount)} of ${conflictCount}</b>${conflictHTML}<div class="syncactions"><button type="button" class="btn sm" data-sync-act="conflict-page" data-page="${page - 1}" ${page === 0 ? "disabled" : ""}>Previous</button><button type="button" class="btn sm" data-sync-act="conflict-page" data-page="${page + 1}" ${(page + 1) * pageSize >= conflictCount ? "disabled" : ""}>Next</button></div></div>` : ""}
+      </div>`;
+    }
+    body.innerHTML = `<div class="syncstack">
+      <div class="syncpanel"><div class="syncrow"><div class="syncmeta"><h4>Signed in as ${esc(apiAccount.email || "your account")}</h4><p>${contacts.length.toLocaleString()} contacts in your account · app-only fields remain private to your account</p></div><button type="button" class="btn sm" data-sync-act="logout">Sign out</button></div>${accountPendingWrites.size ? `<p class="syncstatus" role="status">${esc(apiFailure || `${accountPendingWrites.size} saved change${accountPendingWrites.size === 1 ? "" : "s"} waiting to retry.`)} <button type="button" class="btn sm" data-sync-act="retry">Retry saves</button></p>` : ""}</div>
+      ${migrationHTML}<div class="syncstack">${connectionHTML}</div>
+      ${connectHTML ? `<div class="syncactions">${connectHTML}</div>` : ""}
+      ${appleHTML}${previewHTML}
+      <p class="syncnote">Two-way sync is never applied silently. Review the preview and choose a version for every conflict. Sync maps name, email, phone, company, and notes.</p>
+      ${syncMessage ? `<p class="syncstatus" role="status">${esc(syncMessage)}</p>` : ""}
+    </div>`;
+    foot.innerHTML = `<button type="button" class="btn" data-close>${syncPreviewState ? "Cancel preview" : "Close"}</button>${syncPreviewState ? `<button type="button" class="btn primary" id="syncApplyBtn" ${syncPreviewState.choices.size !== conflictCount ? "disabled" : ""}>Apply reviewed sync</button>` : ""}`;
+  }
+
+  async function refreshAccountConnections(){
+    if (!apiAccount) return;
+    const result = await apiRequest("/api/connections");
+    accountConnections = Array.isArray(result.connections) ? result.connections : [];
+  }
+  async function refreshAccountContacts(){
+    if (!apiAccount) return;
+    const all = await fetchAccountContacts();
+    splitAll(all); render();
+  }
+  async function previewAccountSync(connectionId){
+    syncMessage = "Getting the latest contacts and preparing a preview…";
+    syncPreviewState = null; renderAccountSync();
+    try {
+      const result = await apiRequest(`/api/connections/${encodeURIComponent(connectionId)}/sync/preview`, { method: "POST", body: "{}" });
+      syncPreviewState = { connectionId, runId: result.runId, preview: result.preview, choices: new Map(), page: 0 };
+      syncMessage = "";
+    } catch(e){ syncMessage = e.message; }
+    renderAccountSync();
+  }
+  async function applyAccountSync(){
+    if (!syncPreviewState || syncPreviewState.choices.size !== syncPreviewState.preview.conflicts.length) return;
+    const state = syncPreviewState;
+    syncMessage = "Applying reviewed changes…"; renderAccountSync();
+    try {
+      const choices = [...state.choices].map(([conflictId,choice]) => ({ conflictId, choice }));
+      const result = await apiRequest(`/api/connections/${encodeURIComponent(state.connectionId)}/sync/apply`, { method: "POST", body: JSON.stringify({ runId: state.runId, choices }) });
+      syncPreviewState = null;
+      await Promise.all([refreshAccountContacts(), refreshAccountConnections()]);
+      syncMessage = `Sync complete: ${result.imported} imported, ${result.exported} exported, ${result.deleted} deleted.`;
+      toast(syncMessage); renderAccountSync();
+    } catch(e){ syncMessage = e.message; renderAccountSync(); }
+  }
+  async function migrateLocalContacts(){
+    const existing = new Set(contacts.concat(trash).map(c => c.id));
+    for (const id of accountContactIds.keys()) existing.add(id);
+    const pending = localSyncSnapshot.filter(c => !existing.has(c.id));
+    try {
+      const chunks = [];
+      let chunk = [], bytes = 2;
+      for (const contact of pending){
+        const data = { ...contact, deletedAt: contact.deletedAt || null };
+        if (JSON.stringify(data).length > 3 * 1024 * 1024) throw new Error(`${fullName(contact)} is too large to copy. Export it as a backup and add it separately.`);
+        const dataBytes = new Blob([JSON.stringify(data)]).size;
+        if (dataBytes > 4 * 1024 * 1024) throw new Error(`${fullName(contact)} is too large to copy. Export it as a backup and add it separately.`);
+        const item = { data }, itemBytes = new Blob([JSON.stringify(item)]).size + 1;
+        if (chunk.length && (chunk.length >= 100 || bytes + itemBytes > 4 * 1024 * 1024)){
+          chunks.push(chunk); chunk = []; bytes = 2;
+        }
+        chunk.push(item); bytes += itemBytes;
+      }
+      if (chunk.length) chunks.push(chunk);
+      for (let i=0; i<chunks.length; i++){
+        syncMessage = `Copying contacts to your account… batch ${i + 1} of ${chunks.length}`;
+        renderAccountSync();
+        const result = await apiRequest("/api/contacts/bulk", { method: "POST", body: JSON.stringify({ contacts: chunks[i] }) });
+        for (const row of result.contacts || []){
+          const internalId = typeof row.data?.id === "string" ? row.data.id : row.id;
+          accountContactIds.set(internalId, row.id);
+          existing.add(internalId);
+        }
+      }
+      localMigrationPending = false;
+      localStorage.setItem(accountMigrationKey(), "done");
+      await refreshAccountContacts();
+      syncMessage = `${pending.length.toLocaleString()} local contact${pending.length === 1 ? "" : "s"} copied. Your browser backup was kept.`;
+      toast(syncMessage); renderAccountSync();
+    } catch(e){ syncMessage = `Copy stopped: ${e.message}. You can retry; already copied contacts will be skipped.`; renderAccountSync(); }
+  }
+
+  $("#syncBtn").addEventListener("click", async () => {
+    syncMessage = ""; syncPreviewState = null;
+    openModal("#syncScrim");
+    try { if (apiAccount) await refreshAccountConnections(); }
+    catch(e){ syncMessage = e.message; }
+    renderAccountSync();
+  });
+  $("#syncBody").addEventListener("click", async e => {
+    const button = e.target.closest("[data-sync-act]");
+    if (!button) return;
+    const action = button.dataset.syncAct;
+    if (action === "login") location.assign(`/auth/${button.dataset.provider}/start`);
+    else if (action === "connect") location.assign(`/auth/${button.dataset.provider}/start?mode=connect`);
+    else if (action === "migrate-local") await migrateLocalContacts();
+    else if (action === "retry"){
+      await flushAccountWrites();
+      syncMessage = accountPendingWrites.size ? (apiFailure || "Some changes still need to be saved.") : "Pending changes saved to your account.";
+      renderAccountSync();
+    }
+    else if (action === "keep-account"){
+      try { localStorage.setItem(accountMigrationKey(), "done"); localMigrationPending = false; syncMessage = "Using your account contacts. The browser copy was kept."; }
+      catch(e){ syncMessage = "Could not save this choice in browser storage. Your local contacts are still unchanged."; }
+      renderAccountSync();
+    } else if (action === "preview") await previewAccountSync(button.dataset.id);
+    else if (action === "conflict-page" && syncPreviewState){
+      syncPreviewState.page = Number(button.dataset.page) || 0; renderAccountSync();
+    } else if (action === "disconnect"){
+      const label = button.dataset.label || "provider";
+      askConfirm(`Disconnect ${label}?`, "Saved contacts will stay in your account, but future changes will no longer sync with this provider.", "Disconnect", async () => {
+        try {
+          await apiRequest(`/api/connections/${encodeURIComponent(button.dataset.id)}`, { method: "DELETE" });
+          syncPreviewState = null; await refreshAccountConnections(); syncMessage = `${label} disconnected.`; renderAccountSync();
+        } catch(e){ syncMessage = e.message; renderAccountSync(); }
+      });
+    } else if (action === "logout"){
+      try { await apiRequest("/auth/logout", { method: "POST", body: "{}" }); location.reload(); }
+      catch(e){ syncMessage = e.message; renderAccountSync(); }
+    }
+  });
+  $("#syncBody").addEventListener("change", e => {
+    const radio = e.target.closest("[data-conflict]");
+    if (!radio || !syncPreviewState) return;
+    syncPreviewState.choices.set(radio.dataset.conflict, radio.value);
+    const apply = $("#syncApplyBtn");
+    if (apply) apply.disabled = syncPreviewState.choices.size !== syncPreviewState.preview.conflicts.length;
+  });
+  $("#syncBody").addEventListener("submit", async e => {
+    if (e.target.id !== "appleConnectForm") return;
+    e.preventDefault();
+    const form = e.target, button = form.querySelector('[type="submit"]');
+    button.disabled = true; syncMessage = "Verifying iCloud access…"; renderAccountSync();
+    try {
+      await apiRequest("/api/connections/apple", { method: "POST", body: JSON.stringify({
+        username: form.elements.username.value.trim(), appPassword: form.elements.appPassword.value
+      }) });
+      form.elements.appPassword.value = "";
+      await refreshAccountConnections(); syncMessage = "iCloud Contacts connected."; renderAccountSync();
+    } catch(err){ syncMessage = err.message; renderAccountSync(); }
+  });
+  $("#syncFoot").addEventListener("click", e => { if (e.target.id === "syncApplyBtn") applyAccountSync(); });
+
   // ----- extra phone numbers in the edit forms -----
   const phLabelOpts = cur => { cur = cur || "Other"; return (PH_LABELS.includes(cur) ? PH_LABELS : PH_LABELS.concat(cur)).map(l => `<option ${l === cur ? "selected" : ""}>${esc(l)}</option>`).join(""); };
   const phRowHTML = p => `<div class="phrow"><div class="phnum"><input type="tel" class="ph-num" aria-label="Phone number" value="${esc(p.number)}"></div><select class="ph-label" aria-label="Label">${phLabelOpts(p.label)}</select><button type="button" class="btn icon ph-rm" aria-label="Remove number" title="Remove number">✕</button></div>`;
@@ -1987,6 +2501,7 @@
       else el.value = src?.[f] || "";
     }
     $("#addrBox").innerHTML = addrFieldsHTML(addrForEdit(src), "f_");
+    $("#editMore").open = !!(c || prefill);
     openModal("#editScrim");
     enhancePhone($("#f_phone"));
     $("#phEdit").innerHTML = phEditorHTML(src?.phones); phEnhance($("#phEdit"));
@@ -3377,19 +3892,33 @@ address = one line. Do not invent anything that is not visible on the card. If t
     else if (a === "none"){ visible().forEach(c => picked.delete(c.id)); renderList(); renderBulk(); }
   });
   $("#list").addEventListener("keydown", e => {
-    if (!selMode || (e.key !== " " && e.key !== "Enter")) return;
     const it = e.target.closest(".item"); if (!it) return;
-    e.preventDefault(); togglePick(it.dataset.id, e.shiftKey);
-    $(`#list .item[data-id="${CSS.escape(it.dataset.id)}"]`)?.focus();
+    if (selMode){
+      if (e.key !== " " && e.key !== "Enter") return;
+      e.preventDefault(); togglePick(it.dataset.id, e.shiftKey);
+      $(`#list .item[data-id="${CSS.escape(it.dataset.id)}"]`)?.focus();
+      return;
+    }
+    if (e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault();
+    const id = it.dataset.id, alreadySelected = id === selectedId;
+    it.click();
+    if (!alreadySelected) requestAnimationFrame(() => {
+      const target = matchMedia("(max-width:760px)").matches
+        ? $("#main [data-act='edit']")
+        : $(`#list .item[data-id="${CSS.escape(id)}"]`);
+      target?.focus();
+    });
   });
   // long-press on touch screens starts selecting
-  let lpTimer = null;
+  let lpTimer = null, lpX = 0, lpY = 0;
   $("#list").addEventListener("pointerdown", e => {
     if (e.pointerType !== "touch") return;
     const it = e.target.closest(".item"); if (!it) return;
+    lpX = e.clientX; lpY = e.clientY;
     lpTimer = setTimeout(() => { longPressed = true; if (navigator.vibrate) try { navigator.vibrate(15); } catch(_){} if (!selMode) enterSelect([it.dataset.id]); else togglePick(it.dataset.id); }, 480);
   });
-  ["pointerup","pointercancel","pointermove"].forEach(ev => $("#list").addEventListener(ev, e => { if (ev === "pointermove" && Math.abs(e.movementY) < 4 && Math.abs(e.movementX) < 4) return; clearTimeout(lpTimer); }));
+  ["pointerup","pointercancel","pointermove"].forEach(ev => $("#list").addEventListener(ev, e => { if (ev === "pointermove" && Math.hypot(e.clientX - lpX, e.clientY - lpY) < 8) return; clearTimeout(lpTimer); }));
   $("#list").addEventListener("contextmenu", e => { if (e.target.closest(".item") && longPressed) e.preventDefault(); });
 
   $("#bulkbar").addEventListener("click", async e => {

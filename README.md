@@ -33,7 +33,12 @@ A single-page contact manager (`index.html`) — no build step, just open it in 
 `appointment.html` is a public form people reach by scanning `appointment-qr-card.png` (or `appointment-qr.svg`). Requests are emailed to you via FormSubmit; the first request triggers a one-time activation email from FormSubmit that must be confirmed.
 
 ## Storage
-Contacts are saved in the browser's `localStorage`. When hosted as a Claude artifact, they are saved privately to the viewer's Claude account instead.
+By default, contacts are saved in the browser's `localStorage`. When hosted as a Claude artifact, they are saved privately to the viewer's Claude account. When this page is served from the same origin as the configured backend and you sign in, contacts are stored in your server-side account. Any pre-existing browser contacts are preserved and can be copied into the account from the sync panel.
+
+## Account and contact sync
+The page includes Google and Microsoft sign-in, account storage, and two-way Google Contacts, Microsoft Outlook / 365, and Apple iCloud Contacts sync. Sync always shows a preview and requires a choice for each conflict. The API, Postgres schema, provider integrations, container setup, and security notes are in [`backend/`](backend/README.md).
+
+For production, serve this page and the API from the same HTTPS origin. Route `/api/*` and `/auth/*` to the backend and serve the static website for `/`; configure the OAuth callback URLs and secrets in the backend environment. The backend package is deploy-ready but is not deployed by this repository, and live sync requires provider credentials and a configured database.
 
 ## Run locally
 Open `index.html` in any modern browser, or serve the folder:
